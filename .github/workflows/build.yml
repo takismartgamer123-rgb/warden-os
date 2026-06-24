@@ -44,7 +44,7 @@ jobs:
       - name: 📦 Install Build Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso wget genisoimage rsync zstd
+          sudo apt-get install -y squashfs-tools xorriso wget genisoimage rsync zstd isolinux syslinux-common syslinux-utils
       - name: ⬇️ Download Base ISO
         run: |
           wget --tries=5 --timeout=30 --waitretry=10 -O base.iso "${{ matrix.base_url }}"
@@ -88,7 +88,6 @@ jobs:
           sudo rm -f chroot/etc/apt/sources.list.d/* || true
           
           if [ "${{ matrix.base }}" = "ubuntu" ]; then
-            # Bodhi 7 64-bit = Ubuntu 22.04 Jammy
             sudo tee chroot/etc/apt/sources.list << 'EOF'
           deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
           deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
@@ -96,7 +95,6 @@ jobs:
           deb http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
           EOF
           else
-            # Bodhi 7 Legacy = Debian 12 Bookworm
             sudo tee chroot/etc/apt/sources.list << 'EOF'
           deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
           deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
