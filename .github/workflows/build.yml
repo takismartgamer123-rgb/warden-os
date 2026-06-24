@@ -341,7 +341,7 @@ jobs:
             
             ### 🔐 Verify:
             sha256sum -c SHA256SUMS.txt
-_Built from Algeria to save bandwidth and old PCs ✌️_
+Built from Algeria to save bandwidth and old PCs ✌️
           files: |
             warden-lite-ghost.iso
             warden-pro-maxmini.iso
