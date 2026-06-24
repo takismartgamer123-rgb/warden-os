@@ -186,6 +186,7 @@ jobs:
             echo "Warden OS $EDITION v1.4 64-bit - Guelma 🇩🇿 by Taki" | sudo tee chroot/etc/warden-version
             echo "No PC deserves to die 🔥" | sudo tee -a chroot/etc/warden-version
             echo "Dedicated to El-Fatih 👑" | sudo tee -a chroot/etc/warden-version
+            sudo mkdir -p chroot/etc/skel/Desktop
             sudo cp README.txt chroot/etc/skel/Desktop/README.txt 2>/dev/null || true
             sudo mkdir -p chroot/usr/share/warden
             sudo cp README.txt chroot/usr/share/warden/README.txt 2>/dev/null || true
