@@ -72,6 +72,29 @@ jobs:
           if [ $RAM -lt 2048 ]; then if zenity --question --title="Speed Boost" --text="Your PC has ${RAM}MB RAM\n\nEnable ZRAM + Hibernate?\nRecommended for old PCs." --width=400; then sudo apt-get install -y zram-config sudo systemctl enable zram-config SWAPSIZE=$(($RAM _ 2)); if [ ! -f /swapfile ]; then sudo fallocate -l ${SWAPSIZE}M /swapfile; sudo chmod 600 /swapfile; sudo mkswap /swapfile; echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab; sudo swapon /swapfile; fi; fi; fi
           zenity --info --title="Setup Complete ♾️" --text="Warden OS Ready!\n\nRun 'warden-store' anytime for apps\nBuilt by Taki from Guelma 🇩🇿"
           EOF
+      cat > warden-setup-64-lite.sh << 'EOF'
+      #!/bin/bash
+      set -e
+      echo "🧹 WARDEN LITE: Starting aggressive debloat..."
+      
+      # Remove bloatware packages
+      apt purge -y firefox* libreoffice* thunderbird* transmission* \
+          hexchat pidgin rhythmbox* totem* cheese simple-scan \
+          gnome-games aisleriot mahjongg gnome-sudoku \
+          snapd flatpak 2>/dev/null || true
+          
+      # Fix GPG keys + Safe apt - هذا هو المهم
+      apt-get install -y debian-archive-keyring ca-certificates || true
+      apt-get update --allow-insecure-repositories || true
+      apt-get update --allow-unauthenticated || true
+      apt autoremove --purge -y || true
+      apt clean || true
+      
+      # Lite optimizations
+      systemctl disable cups bluetooth avahi-daemon || true
+      
+      zenity --info --title="Warden OS Lite Setup" --text="Warden OS Lite Ready! Max RAM: 512MB"
+      EOF
           cat > warden-setup-32.sh << 'EOF'
           #!/bin/bash
           zenity --info --title="Warden OS Setup ♾️ 32-bit" --text="Salam! Welcome to Warden OS 32-bit\n\nBuilt from Guelma, Algeria 🇩🇿\nFor PCs from 2004 🔥" --width=400
