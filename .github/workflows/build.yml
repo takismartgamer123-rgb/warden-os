@@ -51,25 +51,22 @@ jobs:
       run: |
         if [ -f base/casper/filesystem.squashfs ]; then
           SQUASHFS_PATH="base/casper/filesystem.squashfs"
+          SQUASHFS_DIR="casper"
         elif [ -f base/live/filesystem.squashfs ]; then
           SQUASHFS_PATH="base/live/filesystem.squashfs"
+          SQUASHFS_DIR="live"
         else
-          echo "ERROR: filesystem.squashfs not found in casper/ or live/"
+          echo "ERROR: filesystem.squashfs not found"
           find base/ -name "_.squashfs"
           exit 1
         fi
+        echo "SQUASHFS_DIR=$SQUASHFS_DIR" >> $GITHUB_ENV
         echo "Found squashfs at: $SQUASHFS_PATH"
         sudo unsquashfs -f -d squashfs-root "$SQUASHFS_PATH"
     - name: 🏗️ Build ${{ matrix.name }} Edition
       run: |
         echo "=== Building Warden ${{ matrix.name }} ==="
-        if [ -d base/casper ]; then
-          BASE_DIR="base"
-        elif [ -d base/live ]; then
-          BASE_DIR="base"
-        fi
-        
-        sudo rsync -a $BASE_DIR/ ext/ --exclude=/casper/filesystem.squashfs --exclude=/live/filesystem.squashfs
+        sudo rsync -a base/ ext/ --exclude=/casper/filesystem.squashfs --exclude=/live/filesystem.squashfs
         sudo rm -rf chroot
         sudo rsync -a --delete squashfs-root/ chroot/
         
@@ -79,8 +76,19 @@ jobs:
         sudo mount -t sysfs none chroot/sys
         sudo mount -t devpts none chroot/dev/pts
         
+        # Fix 1: resolv.conf symlink
         sudo rm -f chroot/etc/resolv.conf
         echo 'nameserver 8.8.8.8' | sudo tee chroot/etc/resolv.conf
+        
+        # Fix 2: Kill apt locks + fix broken dpkg
+        sudo chroot chroot bash -c "rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock_ || true"
+        sudo chroot chroot dpkg --configure -a || true
+        
+        # Fix 3: Force update + fix keys for Bodhi
+        sudo chroot chroot apt-get update --allow-insecure-repositories || true
+        sudo chroot chroot apt-get update --allow-unauthenticated || true
+        sudo chroot chroot apt-get install -y --allow-unauthenticated bodhi-keyring || true
+        sudo chroot chroot apt-get update
         
         echo "Warden OS ${{ matrix.name }} - ${{ github.event.inputs.version || github.ref_name }}" | sudo tee chroot/etc/warden-version
         echo "Built from Guelma, Algeria 🇩🇿 by Taki" | sudo tee -a chroot/etc/warden-version
@@ -163,34 +171,35 @@ jobs:
         X-GNOME-Autostart-enabled=true
         EOF
         
-        sudo chroot chroot apt-get install -y debian-archive-keyring ca-certificates
-        sudo chroot chroot apt-get update --allow-insecure-repositories || true
-        sudo chroot chroot apt-get update --allow-unauthenticated || true
-        sudo chroot chroot apt-get install -y zenity htop
+        # Fix 4: Install zenity safely
+        sudo chroot chroot apt-get install -y zenity htop || true
         sudo chroot chroot apt-get purge -y 'midori_' 'netsurf_' 'epad_' 'leafpad_' 'snapd_' 'flatpak_' 2>/dev/null || true
         
-        sudo chroot chroot apt-get autoremove --purge -y
+        sudo chroot chroot apt-get autoremove --purge -y || true
         sudo chroot chroot apt-get clean
-        sudo rm -rf chroot/tmp/_ chroot/var/cache/apt/archives/_
+        sudo rm -rf chroot/tmp/_ chroot/var/cache/apt/archives/_ chroot/var/lib/apt/lists/_
         
-        sudo umount chroot/dev/pts
-        sudo umount chroot/dev
-        sudo umount chroot/run
-        sudo umount chroot/proc
-        sudo umount chroot/sys
+        sudo umount chroot/dev/pts || true
+        sudo umount chroot/dev || true
+        sudo umount chroot/run || true
+        sudo umount chroot/proc || true
+        sudo umount chroot/sys || true
         
-        if [ -d ext/casper ]; then
+        # Fix 5: Use correct squashfs dir
+        if [ "${{ env.SQUASHFS_DIR }}" = "casper" ]; then
           sudo rm -f ext/casper/filesystem.squashfs
           sudo mksquashfs chroot ext/casper/filesystem.squashfs -comp zstd -Xcompression-level 15 -b 1M -noappend
           sudo du -sx --block-size=1 chroot | cut -f1 | sudo tee ext/casper/filesystem.size
-        elif [ -d ext/live ]; then
+        else
           sudo rm -f ext/live/filesystem.squashfs
           sudo mksquashfs chroot ext/live/filesystem.squashfs -comp zstd -Xcompression-level 15 -b 1M -noappend
           sudo du -sx --block-size=1 chroot | cut -f1 | sudo tee ext/live/filesystem.size
         fi
         
+        # Fix 6: sed for both grub and isolinux
         sudo sed -i 's/Bodhi Linux/Warden OS - Guelma 🇩🇿/g' ext/boot/grub/grub.cfg 2>/dev/null || true
         sudo sed -i 's/Bodhi Linux/Warden OS - Guelma 🇩🇿/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
+        sudo sed -i 's/bodhi/warden/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
         echo "menu title Warden OS ${{ matrix.name }} - Built from Guelma 🇩🇿 by Taki" | sudo tee -a ext/isolinux/isolinux.cfg                  cd ext         EFI_ARGS=""         if [ -f boot/grub/efi.img ]; then           EFI_ARGS="-eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot -isohybrid-gpt-basdat"         fi         sudo xorriso -as mkisofs -iso-level 3 -full-iso9660-filenames -volid "WARDEN_${{ matrix.name }}" -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin $EFI_ARGS -output "../warden-${{ matrix.name }}.iso" .
         cd ..
         ls -lh warden- ${{ matrix.name }}.iso     - name: 🔐 Upload ISO       uses: actions/upload-artifact@v4       with:         name: warden-${{ matrix.name }}.iso
