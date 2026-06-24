@@ -20,15 +20,15 @@ jobs:
         include:
           - name: lite-ghost
             desc: "Warden Lite Ghost 💪 - For 1GB RAM"
-            base_url: https://sourceforge.net/projects/bodhilinux/files/7.0.0/bodhi-7.0.0-64.iso
+            base_url: https://archive.org/download/bodhi-7.0.0-64/bodhi-7.0.0-64.iso
             ui: "Moksha"
           - name: pro-maxmini
             desc: "Warden Fatih Pro 👑 - For 4GB+ RAM"
-            base_url: https://archive.org/download/linuxmint-21.3-cinnamon-64bit/linuxmint-21.3-cinnamon-64bit.iso
-            ui: "Cinnamon"
+            base_url: https://archive.org/download/bodhi-7.0.0-64/bodhi-7.0.0-64.iso
+            ui: "Moksha"
           - name: legacy-32
             desc: "Warden Legacy 32 🔧 - For Old PCs"
-            base_url: https://sourceforge.net/projects/bodhilinux/files/6.0.0/bodhi-6.0.0-legacy.iso
+            base_url: https://downloads.sourceforge.net/project/bodhilinux/7.0.0-beta/bodhi-7.0.0-legacy-beta.iso
             ui: "Moksha"
     steps:
     - name: ⚔️ Checkout Code
@@ -44,7 +44,7 @@ jobs:
         sudo apt-get install -y squashfs-tools xorriso wget genisoimage rsync zstd
     - name: ⬇️ Download Base ISO
       run: |
-        wget -O base.iso "${{ matrix.base_url }}"
+        wget --tries=5 --timeout=30 --waitretry=10 -O base.iso "${{ matrix.base_url }}"
         mkdir -p base
         sudo mount -o loop base.iso base
     - name: 🔓 Extract Base System Once
@@ -149,14 +149,7 @@ jobs:
         sudo chroot chroot apt-get update --allow-insecure-repositories || true
         sudo chroot chroot apt-get update --allow-unauthenticated || true
         sudo chroot chroot apt-get install -y zenity htop
-        
-        if [ "${{ matrix.name }}" = "lite-ghost" ]; then
-          sudo chroot chroot apt-get purge -y 'firefox_' 'libreoffice_' 'thunderbird_' 'snapd_' 'flatpak_' 'midori_' 'netsurf_' 'epad_' 'leafpad_' 2>/dev/null || true
-        elif [ "${{ matrix.name }}" = "pro-maxmini" ]; then
-          sudo chroot chroot apt-get purge -y 'snapd_' 'flatpak_' 'thunderbird_' 'transmission_' 'hexchat_' 'pidgin_' 'rhythmbox_' 'totem_' 'cheese_' 2>/dev/null || true
-        else
-          sudo chroot chroot apt-get purge -y 'midori_' 'netsurf_' 'epad_' 'leafpad_' 2>/dev/null || true
-        fi
+        sudo chroot chroot apt-get purge -y 'midori_' 'netsurf_' 'epad_' 'leafpad_' 'snapd_' 'flatpak_' 2>/dev/null || true
         
         sudo chroot chroot apt-get autoremove --purge -y
         sudo chroot chroot apt-get clean
@@ -173,9 +166,7 @@ jobs:
         sudo du -sx --block-size=1 chroot | cut -f1 | sudo tee ext/casper/filesystem.size
         
         sudo sed -i 's/Bodhi Linux/Warden OS - Guelma 🇩🇿/g' ext/boot/grub/grub.cfg 2>/dev/null || true
-        sudo sed -i 's/Linux Mint/Warden OS - Guelma 🇩🇿/g' ext/boot/grub/grub.cfg 2>/dev/null || true
         sudo sed -i 's/Bodhi Linux/Warden OS - Guelma 🇩🇿/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
-        sudo sed -i 's/Linux Mint/Warden OS - Guelma 🇩🇿/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
         echo "menu title Warden OS ${{ matrix.name }} - Built from Guelma 🇩🇿 by Taki" | sudo tee -a ext/isolinux/isolinux.cfg                  cd ext         EFI_ARGS=""         if [ -f boot/grub/efi.img ]; then           EFI_ARGS="-eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot -isohybrid-gpt-basdat"         fi         sudo xorriso -as mkisofs -iso-level 3 -full-iso9660-filenames -volid "WARDEN_${{ matrix.name }}" -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin $EFI_ARGS -output "../warden-${{ matrix.name }}.iso" .
         cd ..
         ls -lh warden- ${{ matrix.name }}.iso     - name: 🔐 Upload ISO       uses: actions/upload-artifact@v4       with:         name: warden-${{ matrix.name }}.iso
@@ -193,9 +184,9 @@ jobs:
           *Dedicated to El-Fatih 👑*
           
           ### 📦 Editions:
-          *1. Warden Lite Ghost 💪* - For 1GB RAM PCs | UI: Moksha
-          *2. Warden Fatih Pro 👑* - For 4GB+ RAM PCs | UI: Cinnamon  
-          *3. Warden Legacy 32 🔧* - For Old 32-bit PCs | UI: Moksha
+          *1. Warden Lite Ghost 💪* - For 1GB RAM PCs | UI: Moksha | Base: Bodhi 7.0 64bit
+          *2. Warden Fatih Pro 👑* - For 4GB+ RAM PCs | UI: Moksha | Base: Bodhi 7.0 64bit  
+          *3. Warden Legacy 32 🔧* - For Old 32-bit PCs | UI: Moksha | Base: Bodhi 7.0 Legacy
           
           ### 🌍 Features:
           - *Interactive Setup Wizard*: Choose browser, languages, install type
