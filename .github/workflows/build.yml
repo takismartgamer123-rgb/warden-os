@@ -65,7 +65,7 @@ jobs:
         run: |
           sudo unsquashfs -f -d squashfs-root-64 -processors $(nproc) bodhi64/casper/filesystem.squashfs
 
-            - name: 🔓 Extract Base System 32-bit
+      - name: 🔓 Extract Base System 32-bit
         run: |
           echo "=== Finding filesystem.squashfs inside Bodhi 32-bit ==="
           # نطبعو الهيكل كامل باش نشوفو وين راه الملف
