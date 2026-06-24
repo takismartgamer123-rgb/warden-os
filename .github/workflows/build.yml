@@ -29,7 +29,7 @@ jobs:
           sudo apt-get install -y squashfs-tools xorriso wget genisoimage rsync zstd grub-efi-amd64-bin grub-pc-bin mtools
       - name: ⬇️ Download Bodhi Base
         run: |
-          wget -O bodhi.iso https://mirror.umd.edu/bodhi/7.0.0/bodhi-7.0.0-legacy.iso
+          wget -O bodhi.iso https://archive.org/download/bodhi-7.0.0-64/bodhi-7.0.0-64.iso
           mkdir -p bodhi
           sudo mount -o loop bodhi.iso bodhi
       - name: 🔓 Extract Base System Once
