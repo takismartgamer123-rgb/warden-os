@@ -340,8 +340,7 @@ jobs:
             - Zero Terminal Required - Everything GUI
             
             ### 🔐 Verify:
-            sha256sum -c SHA256SUMS.txt
-Built from Algeria to save bandwidth and old PCs ✌️
+            sha256sum -c SHA256SUMS.txt Built from Built to save bandwidth and old PCs ✌️
           files: |
             warden-lite-ghost.iso
             warden-pro-maxmini.iso
