@@ -65,9 +65,26 @@ jobs:
         run: |
           sudo unsquashfs -f -d squashfs-root-64 -processors $(nproc) bodhi64/casper/filesystem.squashfs
 
-      - name: 🔓 Extract Base System 32-bit
+            - name: 🔓 Extract Base System 32-bit
         run: |
-          sudo unsquashfs -f -d squashfs-root-32 -processors $(nproc) bodhi32/casper/filesystem.squashfs
+          echo "=== Finding filesystem.squashfs inside Bodhi 32-bit ==="
+          # نطبعو الهيكل كامل باش نشوفو وين راه الملف
+          echo "ISO structure:"
+          find bodhi32/ -type f -name "*.squashfs" -o -name "*.ext*" | head -20
+          
+          # المسار الصحيح في Bodhi Legacy 32-bit هو هذا:
+          SQUASH_PATH=$(find bodhi32/ -name "filesystem.squashfs" | head -1)
+          
+          if [ -z "$SQUASH_PATH" ]; then
+            echo "❌ filesystem.squashfs not found anywhere in ISO"
+            echo "Full ISO tree:"
+            find bodhi32/ -type f
+            exit 1
+          fi
+          
+          echo "✅ Found squashfs at: $SQUASH_PATH"
+          file "$SQUASH_PATH"
+          sudo unsquashfs -f -d squashfs-root-32 -processors $(nproc) "$SQUASH_PATH"
 
       - name: 📝 Create Warden Scripts
         run: |
