@@ -12,7 +12,7 @@ on:
 permissions:
   contents: write
 jobs:
-build-release:
+  build-release:
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     strategy:
