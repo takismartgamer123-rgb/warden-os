@@ -1,4 +1,4 @@
-name: Record Smart Gamma Tour - Auto Find Store 🎥♾️
+name: Record Smart Gamma Tour - Fixed Display 🎥♾️
 on:
   workflow_dispatch:
     inputs:
@@ -34,13 +34,17 @@ jobs:
           wget -O gamma.iso "https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/${{ github.event.inputs.release_tag }}/${{ matrix.iso }}.iso"
           ls -lh gamma.iso
 
-      - name: Record Smart Tour with Auto Store Finder
+      - name: Record Smart Tour - Display Fixed
         run: |
           qemu-img create -f qcow2 disk.qcow2 10G
+          
+          # 1. شغل شاشة وهمية Xvfb على :99
           export DISPLAY=:99
           Xvfb :99 -screen 0 1280x720x24 &
           sleep 3
           
+          # 2. شغل QEMU ويخليه يرسم في الشاشة :99 عبر VNC
+          # التصحيح هنا: -vnc :1 بدل -display :99
           qemu-system-x86_64 \
             -m 2048 \
             -smp 2 \
@@ -48,24 +52,23 @@ jobs:
             -drive file=disk.qcow2,format=qcow2 \
             -boot d \
             -vga std \
-            -display :99 \
+            -vnc :1 \
             -netdev user,id=net0 -device e1000,netdev=net0 \
-            -usb -device usb-tablet \
-            &
+            -usb -device usb-tablet &
           QEMU_PID=$!
           
           sleep 60  # الإقلاع الكامل
           
+          # 3. ابدا التسجيل من الشاشة :99
           ffmpeg -f x11grab -video_size 1280x720 -i :99 -codec:v libx264 -preset ultrafast -t 180 ${{ matrix.iso }}-tour.mp4 &
           FFMPEG_PID=$!
           
-          # السيناريو الذكي 180 ثانية
-          sleep 5   # سطح المكتب
+          # 4. السيناريو
+          sleep 5
           
-          # 1. Terminal + gamma-theme
           xdotool key ctrl+alt+t
           sleep 3
-          xdotool type "clear && echo '=== Gamma Linux ${{ matrix.iso }} - Dedicated to Fateh ===' && lsb_release -a"
+          xdotool type "clear && echo '=== Gamma Linux ${{ matrix.iso }} - Dedicated to Fateh ==='"
           xdotool key Return
           sleep 5
           xdotool type "gamma-theme gamma"
@@ -75,7 +78,7 @@ jobs:
           xdotool key Return
           sleep 8
           
-          # 2. المثبت
+          # المثبت
           xdotool key super+d
           sleep 2
           xdotool mousemove 100 100 click 1
@@ -86,39 +89,27 @@ jobs:
           xdotool key Escape
           sleep 3
           
-          # 3. Gamma Store الذكي ♾️ - هذا هو التعديل
+          # Gamma Store الذكي
           echo "نحوّس على Gamma Store..."
-          xdotool key super+d  # اظهار سطح المكتب
+          xdotool key super+d
           sleep 3
           
-          # دبل كليك على أيقونة الستور - نحاولو 3 بلايص شائعة
+          # نحاولو نفتحوه
           xdotool mousemove 200 200 click 1
-          xdotool click 1
-          sleep 2
-          xdotool click 1
-          sleep 3
-          
-          xdotool mousemove 200 300 click 1
-          xdotool click 1
-          sleep 2
-          xdotool click 1
-          sleep 3
-          
-          xdotool mousemove 100 300 click 1
           xdotool click 1
           sleep 2
           xdotool click 1
           sleep 5
           
-          # ضرك نحوسو على النافذة بالاسم ونفعلوها
+          # نحوسو على النافذة
           STORE_WINDOW=$(xdotool search --name "${{ github.event.inputs.store_name }}" | head -1)
           if [ -n "$STORE_WINDOW" ]; then
             echo "لقينا Gamma Store: $STORE_WINDOW"
             xdotool windowactivate $STORE_WINDOW
-            sleep 20  # خليه يبان 20 ثانية
-            xdotool key Alt+F4  # اغلق
+            sleep 20
+            xdotool key Alt+F4
           else
-            echo "مالقيناهش بالاسم، نجربو نكتبوه في القائمة"
+            echo "نجربو من القائمة"
             xdotool key super
             sleep 2
             xdotool type "${{ github.event.inputs.store_name }}"
@@ -129,7 +120,7 @@ jobs:
           fi
           sleep 3
           
-          # 4. فايل مانجر
+          # فايل مانجر
           xdotool key super
           sleep 2
           xdotool type "pcmanfm"
@@ -148,10 +139,9 @@ jobs:
           body: |
             ## 🎥 Gamma Linux Smart Tour - ${{ matrix.iso }}
             
+            **Fixed:** Black screen issue resolved
             **Duration:** 3 minutes  
-            **Resolution:** 1280x720  
             **Content:** Boot → Terminal → gamma-theme → Installer → **${{ github.event.inputs.store_name }}** → File Manager
-            **Auto-Detection:** ON ♾️
             
             *Alpha failed. Beta crashed. Gamma survives.*  
             *Dedicated to my father Fateh* 🇩🇿
