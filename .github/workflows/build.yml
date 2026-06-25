@@ -88,10 +88,21 @@ jobs:
           echo "Found squashfs at: $SQUASHFS_PATH"
           sudo unsquashfs -f -d squashfs-root "$SQUASHFS_PATH"
 
-      - name: Build ${{ matrix.name }} Edition - ANTI-DEATH MODE v4.2 FINAL
+      - name: Build ${{ matrix.name }} Edition - ANTI-DEATH MODE v4.4 FINAL
         run: |
           echo "=== Building Gamma ${{ matrix.name }} - ${{ matrix.desc }} ==="
-          sudo rsync -a base/ ext/ --exclude=/casper/filesystem.squashfs --exclude=/live/filesystem.squashfs
+
+          # FIX 1: rsync صحيح - ننسخو كلش ماعدا squashfs فقط
+          sudo rsync -a base/ ext/ --exclude=/${{ env.SQUASHFS_DIR }}/filesystem.squashfs
+
+          # FIX 2: نتأكدو بلي ملفات البوت موجودة
+          if [! -f ext/isolinux/isolinux.bin ]; then
+            echo "WARNING: isolinux.bin missing! Copying from syslinux..."
+            sudo mkdir -p ext/isolinux
+            sudo cp /usr/lib/ISOLINUX/isolinux.bin ext/isolinux/
+            sudo cp /usr/lib/syslinux/modules/bios/*.c32 ext/isolinux/ || true
+          fi
+
           sudo rm -rf chroot
           sudo rsync -a --delete squashfs-root/ chroot/
           sudo mount --bind /dev chroot/dev
@@ -102,7 +113,6 @@ jobs:
           sudo rm -f chroot/etc/resolv.conf
           echo 'nameserver 8.8.8.8' | sudo tee chroot/etc/resolv.conf
 
-          # FIX 1: Kill locks
           sudo chroot chroot bash -c "
             killall apt apt-get dpkg 2>/dev/null || true
             rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* /var/lib/dpkg/lock-frontend
@@ -129,7 +139,7 @@ jobs:
 
           sudo chroot chroot apt-get update -y
 
-          # FIX 2: SAFE PURGE - منمسحوش ملفات الـ config المشتركة
+          # SAFE PURGE - منمسحوش ملفات الـ config المشتركة
           sudo chroot chroot bash -c "
             apt-get remove -y --purge moksha* e17* enlightenment* || true
             apt-get remove -y --purge bodhi-artwork bodhi-theme-moksha || true
@@ -139,14 +149,12 @@ jobs:
             apt-get autoremove --purge -y || true
           "
 
-          # FIX 3: Install LXQt + Dependencies الكاملة باش مايطيحش Black Screen
           sudo chroot chroot apt-get install -y --no-install-recommends lxqt-core lxqt-themes openbox pcmanfm-qt
           sudo chroot chroot apt-get install -y --no-install-recommends materia-gtk-theme papirus-icon-theme fonts-noto-core fonts-noto-color-emoji
           sudo chroot chroot apt-get install -y --no-install-recommends lightdm lightdm-gtk-greeter lxqt-sudo
           sudo chroot chroot apt-get install -y --no-install-recommends zram-tools preload tlp zenity curl wget
           sudo chroot chroot apt-get install -y --no-install-recommends adwaita-icon-theme hicolor-icon-theme
 
-          # FIX 4: Installers صحاح - ممنوع نحذف casper
           if [ "${{ matrix.installer }}" = "ubiquity" ]; then
             echo "Installing Ubiquity for Ubuntu base..."
             sudo chroot chroot apt-get install -y --no-install-recommends ubiquity ubiquity-frontend-gtk ubiquity-slideshow-ubuntu ubiquity-casper casper
@@ -156,6 +164,18 @@ jobs:
           fi
 
           sudo chroot chroot bash -c "dpkg --configure -a || true; apt-get install -f -y || true"
+
+          # FIX 3: LightDM Auto-Login + Session LXQt
+          sudo chroot chroot bash -c "
+            mkdir -p /etc/lightdm/lightdm.conf.d
+            echo '[Seat:*]' > /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf
+            echo 'user-session=lxqt' >> /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf
+            echo 'autologin-user=gamma' >> /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf
+            echo 'autologin-user-timeout=0' >> /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf
+            useradd -m -s /bin/bash gamma || true
+            usermod -aG sudo gamma || true
+            echo 'gamma:gamma' | chpasswd
+          "
 
           sudo mkdir -p chroot/usr/share/backgrounds
           sudo mkdir -p chroot/usr/share/pixmaps
@@ -200,6 +220,7 @@ jobs:
           Keywords=install;system;
           EOF
           fi
+          # FIX 4: chmod +x للأيقونة باش تخدم مباشرة
           sudo chmod +x chroot/etc/skel/Desktop/install-gamma.desktop
 
           sudo tee chroot/usr/local/bin/gamma-theme << 'EOF'
@@ -401,10 +422,8 @@ jobs:
           sudo chroot chroot bash -c "apt-get clean || true"
           sudo chroot chroot rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
           sudo chroot chroot rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/*
-          # FIX 5: SAFE CLEANUP - منمسحوش كل الأيقونات
           sudo chroot chroot rm -rf /usr/share/locale/* || true
           sudo chroot chroot bash -c "mkdir -p /usr/share/locale/en /usr/share/locale/ar /usr/share/locale/fr"
-          # نحافظو على الأيقونات الأساسية
           sudo chroot chroot find /usr/share/icons -type f -name "*.svg" -size +100k -delete 2>/dev/null || true
           sudo chroot chroot find /usr/share/icons -type f -name "*.png" -size +500k -delete 2>/dev/null || true
           sudo cp gamma-wallpaper.jpg chroot/usr/share/backgrounds/gamma-wallpaper.jpg
@@ -413,7 +432,7 @@ jobs:
           sudo chroot chroot find /var/log -type f -delete
           sudo chroot chroot rm -rf /root/.cache /home/*/.cache 2>/dev/null || true
 
-          # FIX 6: Umount قبل du باش مايموتش
+          # FIX 5: Umount قبل du باش مايموتش
           sudo umount chroot/dev/pts || true
           sudo umount chroot/dev || true
           sudo umount chroot/run || true
@@ -439,6 +458,10 @@ jobs:
           echo "menu title Gamma Linux ${{ matrix.name }} - LXQt 1.4 Royal | By Taki" | sudo tee -a ext/isolinux/isolinux.cfg
 
           cd ext
+          # FIX 6: نتأكدو من وجود ملفات البوت قبل xorriso
+          ls -la isolinux/isolinux.bin || exit 1
+          ls -la /usr/lib/ISOLINUX/isohdpfx.bin || exit 1
+
           EFI_ARGS=""
           if [ -f boot/grub/efi.img ]; then
             EFI_ARGS="-eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot -isohybrid-gpt-basdat"
@@ -502,6 +525,7 @@ jobs:
             **3. Gamma Store v3:** Universal App Store - 200,000+ packages
             **4. Gamma Drivers Manager:** Hardware Support
             **5. Ultra-Lite:** ZRAM + Preload + TLP enabled
+            **6. Auto-Login:** No password needed in Live mode
 
             ### Real RAM Usage Idle:
             - **Legacy 32**: ~60MB
