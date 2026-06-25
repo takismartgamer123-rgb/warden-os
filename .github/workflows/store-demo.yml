@@ -1,4 +1,4 @@
-name: Gamma Store Demo - FINAL REAL 🎥♾️
+name: Gamma Store Demo - FAIL IF BLANK 🎥♾️
 on:
   workflow_dispatch:
     inputs:
@@ -19,47 +19,50 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ffmpeg x11-utils xterm xdotool \
-            fonts-noto-color-emoji wget imagemagick fluxbox
+            fonts-noto-color-emoji wget imagemagick
           
       - name: Record Store Demo
         run: |
           export DISPLAY=:99
           Xvfb :99 -screen 0 1280x720x24 &
           sleep 5
-          fluxbox &
-          sleep 5
           
-          # خلفية + xterm
-          convert -size 1280x720 xc:#0a0a0a /tmp/bg.png
-          display -window root /tmp/bg.png &
-          sleep 2
-          xterm -geometry 120x35+50+50 -fa 'Monospace' -fs 16 -bg black -fg "#00ff88" -title "GammaTerminal" &
+          # بلا fluxbox بلا openbox - هوما سبب المشاكل
           
-          # استنى xterm يبان صح - هذا هو الحل تاع 0.1kbits
-          for i in {1..10}; do
-            if xdotool search --name "GammaTerminal" >/dev/null 2>&1; then
-              echo "xterm found, starting record"
-              break
-            fi
-            echo "Waiting for xterm... $i"
-            sleep 1
-          done
+          # افتح xterm ديركت على شاشة سودة
+          xterm -geometry 120x35+50+50 -fa 'Monospace' -fs 16 -bg "#0a0a0a" -fg "#00ff88" &
+          sleep 8
           
-          # فحص أخير
+          # فحص صارم: لازم xterm يبان ولا نحبسو
+          if ! xdotool search --name "xterm" >/dev/null 2>&1; then
+            echo "ERROR: xterm not found. Screen is blank"
+            import -window root /tmp/debug.png
+            echo "Debug screenshot size: $(stat -c%s /tmp/debug.png) bytes"
+            exit 1
+          fi
+          
+          # فحص ثاني: حجم السكرينشوت
           import -window root /tmp/check.png
-          echo "Screenshot size: $(stat -c%s /tmp/check.png) bytes"
+          SIZE=$(stat -c%s /tmp/check.png)
+          echo "Screenshot size: $SIZE bytes"
+          if [ $SIZE -lt 100000 ]; then
+            echo "ERROR: Screen is blank or too small: $SIZE bytes"
+            echo "Expected >100KB with xterm visible"
+            exit 1
+          fi
           
-          # ضرك سجل - الشاشة فيها xterm مضمون
+          echo "Screen OK. Starting record..."
+          
+          # ضرك سجل - مضمون كاين xterm
           ffmpeg -f x11grab -video_size 1280x720 -framerate 25 -i :99 \
             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -t 75 gamma-store.mp4 &
           FFMPEG_PID=$!
           sleep 3
           
-          # focus على xterm
-          xdotool search --name "GammaTerminal" windowactivate
+          # focus واكتب
+          xdotool search --name "xterm" windowactivate
           sleep 1
           
-          # السيناريو
           xdotool type "clear"
           xdotool key Return
           sleep 1
@@ -88,9 +91,17 @@ jobs:
           
           kill $FFMPEG_PID
           sleep 3
+          
+          # فحص أخير للفيديو
           ls -lh gamma-store.mp4
+          FILESIZE=$(stat -c%s gamma-store.mp4)
+          if [ $FILESIZE -lt 100000 ]; then
+            echo "ERROR: Video file too small: $FILESIZE bytes"
+            exit 1
+          fi
           
       - name: Upload to Release
+        if: success()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
