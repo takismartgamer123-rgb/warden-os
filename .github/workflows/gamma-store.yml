@@ -237,7 +237,7 @@ jobs:
           EOF
           
           # حط اللوغو تاعك هنا - بدل الرابط
-          wget -q -O "${BUILD_DIR}/usr/share/gamma-store/logo.png" "https://raw.githubusercontent.com/takismartgamer123-rgb/Gamma-linux/main/logo.png" || echo "Logo not found, using default"
+          wget -q -O "${BUILD_DIR}/usr/share/gamma-store/logo.png" "https://raw.githubusercontent.com/takismartgamer123-rgb/Gamma-linux/main/assets/logo.png" || echo "Logo not found, using default"
           
           cat > "${BUILD_DIR}/usr/share/applications/gamma-store.desktop" << 'EOF'
           [Desktop Entry]
