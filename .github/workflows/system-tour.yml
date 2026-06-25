@@ -1,4 +1,4 @@
-name: Record Smart Gamma Tour - Fixed Display 🎥♾️
+name: Record Gamma Full Install + Tour 🎥♾️
 on:
   workflow_dispatch:
     inputs:
@@ -6,10 +6,10 @@ on:
         description: 'التاق تاع الريليز الحالي'
         required: true
         default: 'v2.1-Royal'
-      store_name:
-        description: 'اسم نافذة الستور - مثال: Gamma Store'
+      store_deb_name:
+        description: 'اسم ملف .deb تاع الستور'
         required: true
-        default: 'Gamma Store'
+        default: 'gamma-store_2.2.0_all.deb'
 
 permissions:
   contents: write
@@ -22,9 +22,8 @@ jobs:
       fail-fast: false
       matrix:
         iso: [gamma-legacy-32, gamma-lite-ghost, gamma-pro-maxmini]
-    
     steps:
-      - name: Install QEMU + FFmpeg + Xvfb + xdotool + wmctrl
+      - name: Install QEMU + FFmpeg + Xvfb + xdotool
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-system-x86 qemu-utils ffmpeg xvfb xdotool wmctrl
@@ -34,19 +33,18 @@ jobs:
           wget -O gamma.iso "https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/${{ github.event.inputs.release_tag }}/${{ matrix.iso }}.iso"
           ls -lh gamma.iso
 
-      - name: Record Smart Tour - Display Fixed
+      - name: Record Full Install Demo - 3min
         run: |
-          qemu-img create -f qcow2 disk.qcow2 10G
+          qemu-img create -f qcow2 disk.qcow2 15G
           
-          # 1. شغل شاشة وهمية Xvfb على :99
+          # 1. شاشة وهمية
           export DISPLAY=:99
           Xvfb :99 -screen 0 1280x720x24 &
           sleep 3
           
-          # 2. شغل QEMU ويخليه يرسم في الشاشة :99 عبر VNC
-          # التصحيح هنا: -vnc :1 بدل -display :99
+          # 2. شغل QEMU Live
           qemu-system-x86_64 \
-            -m 2048 \
+            -m 3072 \
             -smp 2 \
             -cdrom gamma.iso \
             -drive file=disk.qcow2,format=qcow2 \
@@ -56,92 +54,110 @@ jobs:
             -netdev user,id=net0 -device e1000,netdev=net0 \
             -usb -device usb-tablet &
           QEMU_PID=$!
+          sleep 90 # إقلاع كامل + سطح المكتب
           
-          sleep 60  # الإقلاع الكامل
-          
-          # 3. ابدا التسجيل من الشاشة :99
-          ffmpeg -f x11grab -video_size 1280x720 -i :99 -codec:v libx264 -preset ultrafast -t 180 ${{ matrix.iso }}-tour.mp4 &
+          # 3. ابدا التسجيل
+          ffmpeg -f x11grab -video_size 1280x720 -i :99 -codec:v libx264 -preset ultrafast -t 180 ${{ matrix.iso }}-full-demo.mp4 &
           FFMPEG_PID=$!
           
-          # 4. السيناريو
+          # 4. السيناريو الكامل 3 دقايق
           sleep 5
           
+          # 0:00-0:10 افتح ترمينال
           xdotool key ctrl+alt+t
           sleep 3
-          xdotool type "clear && echo '=== Gamma Linux ${{ matrix.iso }} - Dedicated to Fateh ==='"
+          xdotool type "clear"
           xdotool key Return
-          sleep 5
-          xdotool type "gamma-theme gamma"
+          sleep 1
+          xdotool type "echo '=== Gamma Linux ${{ matrix.iso }} ==='"
+          xdotool key Return
+          sleep 1
+          xdotool type "echo 'Dedicated to my father Fateh'"
+          xdotool key Return
+          sleep 3
+          
+          # 0:10-1:00 حمل وثبت الستور من الترمينال
+          xdotool type "wget https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/${{ github.event.inputs.release_tag }}/${{ github.event.inputs.store_deb_name }}"
+          xdotool key Return
+          sleep 15 # وقت التحميل
+          
+          xdotool type "ls -lh ${{ github.event.inputs.store_deb_name }}"
+          xdotool key Return
+          sleep 3
+          
+          xdotool type "sudo apt-get install -y ./{{ github.event.inputs.store_deb_name }}"
+          xdotool key Return
+          sleep 20 # وقت التثبيت
+          
+          xdotool type "echo '=== Store Installed Successfully ==='"
+          xdotool key Return
+          sleep 3
+          
+          # 1:00-1:20 شغل الستور من الترمينال
+          xdotool type "gamma-store"
+          xdotool key Return
+          sleep 10 # وقت فتح الستور
+          
+          # 1:20-2:00 استعمل الستور: بحث
+          xdotool key Tab
+          sleep 1
+          xdotool key Return # زر Search
+          sleep 2
+          xdotool type "firefox"
+          sleep 1
+          xdotool key Return
+          sleep 15 # نتائج البحث + الكاش
+          
+          # 2:00-2:20 اختار وثبت
+          xdotool key Tab
+          sleep 1
+          xdotool key space # اختار أول نتيجة
+          sleep 1
+          xdotool key Tab
+          sleep 1
+          xdotool key Tab
+          sleep 1
+          xdotool key Return # Install
+          sleep 15 # شريط التقدم
+          
+          # 2:20-2:40 اقفل الستور وروح للترمينال
+          xdotool key Alt+F4
+          sleep 2
+          xdotool key Alt+Tab
+          sleep 2
+          
+          # 2:40-3:00 النهاية
+          xdotool type "clear"
+          xdotool key Return
+          sleep 1
+          xdotool type "echo 'Alpha failed. Beta crashed. Gamma survives'"
+          xdotool key Return
+          sleep 2
+          xdotool type "echo 'Maximum Power, Minimum RAM'"
+          xdotool key Return
+          sleep 2
+          xdotool type "echo 'Dedicated to my father Fateh'"
           xdotool key Return
           sleep 8
-          xdotool type "gamma-theme king"
-          xdotool key Return
-          sleep 8
-          
-          # المثبت
-          xdotool key super+d
-          sleep 2
-          xdotool mousemove 100 100 click 1
-          xdotool click 1
-          sleep 2
-          xdotool click 1
-          sleep 15
-          xdotool key Escape
-          sleep 3
-          
-          # Gamma Store الذكي
-          echo "نحوّس على Gamma Store..."
-          xdotool key super+d
-          sleep 3
-          
-          # نحاولو نفتحوه
-          xdotool mousemove 200 200 click 1
-          xdotool click 1
-          sleep 2
-          xdotool click 1
-          sleep 5
-          
-          # نحوسو على النافذة
-          STORE_WINDOW=$(xdotool search --name "${{ github.event.inputs.store_name }}" | head -1)
-          if [ -n "$STORE_WINDOW" ]; then
-            echo "لقينا Gamma Store: $STORE_WINDOW"
-            xdotool windowactivate $STORE_WINDOW
-            sleep 20
-            xdotool key Alt+F4
-          else
-            echo "نجربو من القائمة"
-            xdotool key super
-            sleep 2
-            xdotool type "${{ github.event.inputs.store_name }}"
-            sleep 2
-            xdotool key Return
-            sleep 20
-            xdotool key Alt+F4
-          fi
-          sleep 3
-          
-          # فايل مانجر
-          xdotool key super
-          sleep 2
-          xdotool type "pcmanfm"
-          xdotool key Return
-          sleep 10
           
           wait $FFMPEG_PID
           kill $QEMU_PID || true
-          ls -lh ${{ matrix.iso }}-tour.mp4
+          ls -lh ${{ matrix.iso }}-full-demo.mp4
 
       - name: Upload Video to Release ${{ github.event.inputs.release_tag }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
-          files: ${{ matrix.iso }}-tour.mp4
+          files: ${{ matrix.iso }}-full-demo.mp4
           body: |
-            ## 🎥 Gamma Linux Smart Tour - ${{ matrix.iso }}
+            ## 🎥 Gamma Linux Full Demo - ${{ matrix.iso }}
             
-            **Fixed:** Black screen issue resolved
-            **Duration:** 3 minutes  
-            **Content:** Boot → Terminal → gamma-theme → Installer → **${{ github.event.inputs.store_name }}** → File Manager
+            **3-minute complete walkthrough:**
+            1. Boot Live ISO
+            2. **Terminal: wget + apt install Gamma Store**
+            3. **Launch gamma-store from terminal**
+            4. **Search + Install firefox from store**
+            5. Outro
             
             *Alpha failed. Beta crashed. Gamma survives.*  
             *Dedicated to my father Fateh* 🇩🇿
