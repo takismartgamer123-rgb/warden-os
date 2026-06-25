@@ -44,7 +44,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Aggressive Free Disk Space
+      - name: Free Disk Space (Clean Workspace)
         run: |
           sudo rm -rf /usr/share/dotnet /opt/ghc "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY"
           sudo rm -rf /usr/local/lib/android /usr/share/swift /usr/local/graalvm /usr/lib/jvm
@@ -314,7 +314,7 @@ jobs:
                 SEARCH=$(zenity --entry --title="Search All Packages" --text="Enter app name or keyword:\nExample: video, browser, editor, game" --width=400)
                 [ -z "$SEARCH" ] && continue
                 (echo "# Searching APT repositories..."; apt-cache search "$SEARCH" | head -200 > /tmp/gamma_search_results; echo "100") | zenity --progress --title="Searching..." --text="Searching all packages..." --pulsate --auto-close --width=300
-                if [! -s /tmp/gamma_search_results ]; then zenity --warning --text="No packages found for '$SEARCH'" --width=250; continue; fi
+                if [ ! -s /tmp/gamma_search_results ]; then zenity --warning --text="No packages found for '$SEARCH'" --width=250; continue; fi
                 SELECTED=$(cat /tmp/gamma_search_results | zenity --list --title="Search Results: $SEARCH" --text="Found $(wc -l < /tmp/gamma_search_results) packages. Select to install:" --column="Package" --column="Description" --separator=" - " --width=900 --height=600 --ok-label="Install" --cancel-label="Back")
                 [ -z "$SELECTED" ] && continue
                 PKG_NAME=$(echo "$SELECTED" | awk '{print $1}')
@@ -435,8 +435,8 @@ jobs:
           if [ -f boot/grub/efi.img ]; then
             EFI_ARGS="-eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot -isohybrid-gpt-basdat"
           fi
-          sudo xorriso -as mkisofs -iso-level 3 -full-iso9660-filenames -volid "GAMMA_${{ matrix.name }}" -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin $EFI_ARGS -output "../gamma-${{ matrix.name }}.iso".
-          cd..
+          sudo xorriso -as mkisofs -iso-level 3 -full-iso9660-filenames -volid "GAMMA_${{ matrix.name }}" -eltorito-boot isolinux/isolinux.bin -eltorito-catalog isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin $EFI_ARGS -output "../gamma-${{ matrix.name }}.iso" .
+          cd ..
           echo "=== FINAL ISO SIZE ==="
           ls -lh gamma-${{ matrix.name }}.iso
 
@@ -460,8 +460,8 @@ jobs:
       - name: Restructure and Generate SHA256
         run: |
           cd release-files
-          find. -name "*.iso" -exec mv {}. \;
-          find. -maxdepth 1 -type d -name "gamma-*" -exec rm -rf {} \;
+          find . -name "*.iso" -exec mv {} . \;
+          find . -maxdepth 1 -type d -name "gamma-*" -exec rm -rf {} \;
           sha256sum *.iso > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
