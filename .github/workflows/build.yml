@@ -85,9 +85,9 @@ jobs:
           echo "Found squashfs at: $SQUASHFS_PATH"
           sudo unsquashfs -f -d squashfs-root "$SQUASHFS_PATH"
 
-      - name: Build ${{ matrix.name }} Edition - ANTI-DEATH MODE
+      - name: Build ${{ matrix.name }} Edition - ANTI-DEATH MODE v2
         run: |
-          echo "=== Building Gamma ${{ matrix.name }} - ANTI-DEATH MODE ==="
+          echo "=== Building Gamma ${{ matrix.name }} - ANTI-DEATH MODE v2 ==="
           sudo rsync -a base/ ext/ --exclude=/casper/filesystem.squashfs --exclude=/live/filesystem.squashfs
           sudo rm -rf chroot
           sudo rsync -a --delete squashfs-root/ chroot/
@@ -104,8 +104,6 @@ jobs:
             killall apt apt-get dpkg 2>/dev/null || true
             rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* /var/lib/dpkg/lock-frontend
             rm -rf /var/lib/dpkg/updates/*
-            rm -rf /var/lib/dpkg/info/*.postinst
-            rm -rf /var/lib/dpkg/info/*.prerm
             dpkg --configure -a || true
             apt-get install -f -y || true
           "
@@ -154,12 +152,14 @@ jobs:
           # ANTI-DEATH FIX 4: Fix dpkg again after install
           sudo chroot chroot bash -c "dpkg --configure -a || true; apt-get install -f -y || true"
 
-          sudo cp gamma-wallpaper.jpg chroot/usr/share/backgrounds/gamma-wallpaper.jpg
-          sudo cp gamma-logo.png chroot/usr/share/pixmaps/gamma-logo.png
-
-          # Install custom logo as system icon
+          # ANTI-DEATH FIX 5: Create directories first or Bodhi dies
+          sudo mkdir -p chroot/usr/share/backgrounds
+          sudo mkdir -p chroot/usr/share/pixmaps
           sudo mkdir -p chroot/usr/share/icons/hicolor/256x256/apps
           sudo mkdir -p chroot/usr/share/icons/hicolor/48x48/apps
+
+          sudo cp gamma-wallpaper.jpg chroot/usr/share/backgrounds/gamma-wallpaper.jpg
+          sudo cp gamma-logo.png chroot/usr/share/pixmaps/gamma-logo.png
           sudo cp gamma-logo.png chroot/usr/share/icons/hicolor/256x256/apps/gamma-logo.png
           sudo cp gamma-logo.png chroot/usr/share/icons/hicolor/48x48/apps/gamma-logo.png
 
