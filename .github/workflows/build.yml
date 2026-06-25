@@ -59,7 +59,7 @@ jobs:
       - name: Download Gamma Assets
         run: |
           wget -O gamma-wallpaper.jpg "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1920&auto=format&fit=crop"
-          wget -O gamma-logo.png "https://upload.wikimedia.org/wikipedia/commons/2/2f/Greek_letter_gamma.svg"
+          wget -O gamma-logo.png "https://raw.githubusercontent.com/takismartgamer123-rgb/Gamma-linux/main/assets/logo.png"
 
       - name: Download Base ISO
         run: |
@@ -123,7 +123,6 @@ jobs:
           sudo chroot chroot apt-get install -y lightdm lightdm-gtk-greeter
           sudo chroot chroot apt-get install -y zram-tools preload tlp zenity curl wget
 
-          # تثبيت المثبت الرسمي - هذا هو المهم
           if [ "${{ matrix.installer }}" = "ubiquity" ]; then
             echo "Installing Ubiquity for Ubuntu base..."
             sudo chroot chroot apt-get install -y ubiquity ubiquity-frontend-gtk ubiquity-slideshow-ubuntu ubiquity-casper
@@ -135,6 +134,12 @@ jobs:
           sudo cp gamma-wallpaper.jpg chroot/usr/share/backgrounds/gamma-wallpaper.jpg
           sudo cp gamma-logo.png chroot/usr/share/pixmaps/gamma-logo.png
 
+          # Install custom logo as system icon
+          sudo mkdir -p chroot/usr/share/icons/hicolor/256x256/apps
+          sudo mkdir -p chroot/usr/share/icons/hicolor/48x48/apps
+          sudo cp gamma-logo.png chroot/usr/share/icons/hicolor/256x256/apps/gamma-logo.png
+          sudo cp gamma-logo.png chroot/usr/share/icons/hicolor/48x48/apps/gamma-logo.png
+
           sudo mkdir -p chroot/etc/skel/.config/lxqt
           sudo tee chroot/etc/skel/.config/lxqt/lxqt.conf << 'EOF'
           [General]
@@ -144,7 +149,6 @@ jobs:
           style=Fusion
           EOF
 
-          # أيقونة التثبيت على سطح المكتب
           sudo mkdir -p chroot/etc/skel/Desktop
           if [ "${{ matrix.installer }}" = "ubiquity" ]; then
             sudo tee chroot/etc/skel/Desktop/install-gamma.desktop << 'EOF'
@@ -153,7 +157,7 @@ jobs:
           Name=Install Gamma Linux
           Comment=Install Gamma Linux to your hard drive
           Exec=pkexec ubiquity gtk_ui
-          Icon=system-installer
+          Icon=gamma-logo
           Categories=System;Settings;
           Keywords=install;system;
           EOF
@@ -164,7 +168,7 @@ jobs:
           Name=Install Gamma Linux
           Comment=Install Gamma Linux to your hard drive
           Exec=pkexec calamares
-          Icon=system-installer
+          Icon=gamma-logo
           Categories=System;Settings;
           Keywords=install;system;
           EOF
@@ -238,7 +242,6 @@ jobs:
           echo "Dedicated to my father Fateh" | sudo tee -a chroot/etc/gamma-version
           echo "Because no PC deserves to die" | sudo tee -a chroot/etc/gamma-version
 
-          # Gamma Setup - First Boot
           sudo tee chroot/usr/local/bin/gamma-setup << 'EOF'
           #!/bin/bash
           zenity --info --title="Gamma Linux Setup" --text="Welcome to Gamma Linux\nUI: LXQt 1.4 Royal Edition\nMaximum Power, Minimum RAM\n\nAlpha failed. Beta crashed. Gamma survives\n\nBecause no PC deserves to die\n\nDedicated to my father Fateh" --width=450 --height=300
@@ -267,7 +270,6 @@ jobs:
           EOF
           sudo chmod +x chroot/usr/local/bin/gamma-setup
 
-          # Gamma Store v3 - Universal APT Search
           sudo tee chroot/usr/local/bin/gamma-store << 'EOF'
           #!/bin/bash
           while true; do
@@ -318,7 +320,6 @@ jobs:
           EOF
           sudo chmod +x chroot/usr/local/bin/gamma-store
 
-          # Gamma Drivers Manager
           sudo tee chroot/usr/local/bin/gamma-drivers << 'EOF'
           #!/bin/bash
           DRIVER_CHOICE=$(zenity --list --title="Gamma Drivers Manager" --text="Install missing drivers\n\nDedicated to my father Fateh" --column="Driver" --column="Description" "nvidia" "Nvidia GPU Proprietary Driver" "amd-gpu" "AMD GPU Firmware" "intel-microcode" "Intel CPU Updates" "amd64-microcode" "AMD CPU Updates" "wifi-broadcom" "Broadcom WiFi Driver" "wifi-realtek" "Realtek WiFi Driver" "printer-hp" "HP Printer Drivers" "printer-canon" "Canon Printer Drivers" "bluetooth" "Bluetooth Support" "fingerprint" "Fingerprint Reader" "all-firmware" "Install ALL Firmware" --width=600 --height=500 --ok-label="Install" --cancel-label="Exit")
@@ -335,7 +336,7 @@ jobs:
           Name=Gamma Store
           Comment=Install apps from 200,000+ packages
           Exec=gamma-store
-          Icon=system-software-install
+          Icon=gamma-logo
           Categories=System;Settings;
           Keywords=store;install;apps;software;
           EOF
@@ -346,7 +347,7 @@ jobs:
           Name=Gamma Drivers
           Comment=Install hardware drivers
           Exec=gamma-drivers
-          Icon=driver-manager
+          Icon=gamma-logo
           Categories=System;Settings;
           Keywords=drivers;hardware;nvidia;wifi;
           EOF
@@ -500,9 +501,9 @@ jobs:
             - Snap, Flatpak, Telemetry, Moksha completely purged
 
             ### Expected Sizes:
-            **1. Gamma Legacy 32**: ~700MB-770MB (+50MB for installer)
-            **2. Gamma Lite Ghost**: ~770MB-840MB (+50MB for installer)
-            **3. Gamma Fatih Pro**: ~850MB-920MB (+50MB for installer)
+            **1. Gamma Legacy 32**: ~700MB-770MB
+            **2. Gamma Lite Ghost**: ~770MB-840MB
+            **3. Gamma Fatih Pro**: ~850MB-920MB
 
             ### Installation:
             1. Boot from USB/DVD
