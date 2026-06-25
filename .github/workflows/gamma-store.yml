@@ -1,0 +1,249 @@
+name: Build Gamma Store Pro - Full Search ♾️
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Store Version - مثال: 2.2.0'
+        required: true
+        default: '2.2.0'
+      release_tag:
+        description: 'ارفقو مع أي ريليز؟'
+        required: true
+        default: 'v2.1-Royal'
+
+permissions:
+  contents: write
+
+jobs:
+  build-store-pro:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Create Gamma Store Pro .deb
+        run: |
+          PKG_NAME="gamma-store"
+          PKG_VERSION=" ${{ github.event.inputs.version }}"           ARCH="all"           BUILD_DIR="${PKG_NAME}_ ${PKG_VERSION}_${ARCH}"
+          
+          mkdir -p ${BUILD_DIR}/DEBIAN
+          mkdir -p ${BUILD_DIR}/usr/local/bin
+          mkdir -p ${BUILD_DIR}/usr/share/applications
+          mkdir -p ${BUILD_DIR}/usr/share/gamma-store
+          
+          cat > ${BUILD_DIR}/DEBIAN/control << EOF
+          Package: gamma-store
+          Version: ${PKG_VERSION}
+          Section: admin
+          Priority: optional
+          Architecture: all
+          Depends: yad (>= 0.40), pkexec, apt, apt-utils, wget, curl, libnotify-bin, dpkg
+          Recommends: software-properties-common
+          Maintainer: Taki <takismartgamer123@gmail.com>
+          Homepage: https://github.com/takismartgamer123-rgb/Gamma-linux
+          Description: Gamma Store Pro - Advanced App Center with Full Search
+           Modern software center with APT search, .deb installer, and progress bars.
+           Search all Ubuntu packages + install local .deb files.
+           .
+           Alpha failed. Beta crashed. Gamma survives.
+           Dedicated to my father Fateh.
+          EOF
+          
+          cat > ${BUILD_DIR}/usr/local/bin/gamma-store << 'STORE_PRO'
+          #!/bin/bash
+          # Gamma Store Pro v2.2 - Full APT Search + .deb Installer
+          # Dedicated to my father Fateh ♾️
+          
+          install_package() {
+            local pkg="$1"
+            local name="$2"
+            (
+            echo "# 10 Updating package lists..."
+            pkexec apt-get update
+            echo "# 30 Installing $name..."
+            if pkexec apt-get install -y "$pkg" 2>&1; then
+              echo "# 90 Configuring..."
+              sleep 1
+              echo "# 100 Done!"
+            else
+              echo "# Installation failed!"
+              exit 1
+            fi
+            ) | yad --progress --title="Gamma Store" --text="<b>Installing $name</b>" \
+              --percentage=0 --auto-close --width=500 --height=150 \
+              --window-icon="software-install" --no-buttons
+            
+            if [ $? -eq 0 ]; then
+              notify-send "Gamma Store" "✅ $name installed successfully" -i software-install
+              yad --info --title="Success" --text="<b>✅ $name installed!</b>\n\nDedicated to my father Fateh ♾️" --width=350
+            else
+              yad --error --title="Error" --text="❌ Failed to install $name\n\nCheck your internet connection" --width=350
+            fi
+          }
+          
+          install_deb() {
+            local deb_file="$1"
+            (
+            echo "# 20 Analyzing .deb file..."
+            DEPS=$(dpkg -I "$deb_file" | grep Depends | cut -d: -f2)
+            echo "# 40 Installing dependencies..."
+            pkexec apt-get install -y -f
+            echo "# 70 Installing $deb_file..."
+            if pkexec dpkg -i "$deb_file" 2>&1; then
+              echo "# 90 Fixing dependencies..."
+              pkexec apt-get install -f -y
+              echo "# 100 Done!"
+            else
+              echo "# Fixing broken install..."
+              pkexec apt-get install -f -y
+              echo "# 100 Done!"
+            fi
+            ) | yad --progress --title="Gamma Store" --text="<b>Installing .deb Package</b>" \
+              --percentage=0 --auto-close --width=500 --height=150 \
+              --window-icon="package-x-generic" --no-buttons
+              
+            yad --info --title="Success" --text="<b>✅ .deb installed!</b>" --width=350
+          }
+          
+          search_packages() {
+            local query="$1"
+            yad --info --title="Searching..." --text="🔍 Searching for: <b>$query</b>\n\nPlease wait..." --timeout=2 --no-buttons &
+            
+            (
+            echo "# 30 Searching repositories..."
+            RESULTS=$(apt-cache search "$query" | head -100)
+            echo "# 70 Formatting results..."
+            sleep 0.5
+            echo "# 100 Done!"
+            echo "$RESULTS"
+            ) | yad --progress --title="Gamma Store Search" --text="Searching APT repositories..." \
+              --percentage=0 --auto-close --pulsate --width=400 --height=100 --no-buttons
+            
+            if [ -z "$RESULTS" ]; then
+              yad --error --title="No Results" --text="❌ No packages found for: <b>$query</b>" --width=350
+              return
+            fi
+            
+            FORMATTED=""
+            while IFS= read -r line; do
+              PKG=$(echo " $line" | cut -d' ' -f1)               DESC=$(echo "$line" | cut -d' ' -f2- | cut -c1-80)
+              FORMATTED="$FORMATTED\nFALSE|$PKG|$DESC"
+            done <<< "$RESULTS"
+            
+            SELECTED=$(echo -e "$FORMATTED" | yad --list --checklist --title="Gamma Store - Search Results" \
+              --text="<b>Found packages for: $query</b>\n\nSelect packages to install:" \
+              --column="Install" --column="Package" --column="Description" \
+              --width=900 --height=600 --separator=" " --print-column=2 \
+              --button="Back:1" --button="Install Selected:0")
+            
+            if [ $? -eq 0 ] && [ -n "$SELECTED" ]; then
+              for pkg in $SELECTED; do
+                install_package "$pkg" "$pkg"
+              done
+            fi
+          }
+          
+          while true; do
+            ACTION=$(yad --form --title="Gamma Store Pro v2.2 ♾️" \
+              --text="<b><big>🛒 Gamma Store Pro</big></b>\n\n<i>Full APT Search + .deb Installer</i>\n\nSearch and install any Ubuntu package\n\n<b>Alpha failed. Beta crashed. Gamma survives</b>\n<i>Dedicated to my father Fateh</i>" \
+              --image="software-store" --image-on-top \
+              --field="🔍 Search All Packages:FBTN" "bash -c 'echo search'" \
+              --field="📦 Install .deb File:FBTN" "bash -c 'echo deb'" \
+              --field="⭐ Featured Apps:FBTN" "bash -c 'echo featured'" \
+              --field="📊 Installed Apps:FBTN" "bash -c 'echo installed'" \
+              --field="🔄 Update System:FBTN" "bash -c 'echo update'" \
+              --button="Exit:1" --button="About:2" \
+              --width=650 --height=550 --center --buttons-layout=center \
+              --window-icon="software-store")
+            
+            EXIT_CODE=$?
+            [ $EXIT_CODE -eq 1 ] && exit 0
+            [ $EXIT_CODE -eq 2 ] && yad --info --title="About" --text="<b>Gamma Store Pro v2.2</b>\n\nBy: Taki - 17yo from Guelma, Algeria\n\n<b>Features:</b>\n• Full APT package search\n• .deb file installer\n• Progress bars\n• Category browser\n\n<i>Maximum Power, Minimum RAM</i>\n\n<b>Dedicated to my father Fateh ♾️</b>" --width=450 && continue
+            
+            CHOICE=$(echo $ACTION | cut -d'|' -f1-5)
+            
+            if [[ " $CHOICE" == _"search"_ ]]; then               QUERY=$(yad --entry --title="Search Packages" \
+                --text="<b>🔍 Search Ubuntu Repositories</b>\n\nEnter package name or keyword:" \
+                --entry-text="" --width=500)
+              [ -n "$QUERY" ] && search_packages "$QUERY"
+            
+            elif [[ " $CHOICE" == _"deb"_ ]]; then               DEB_FILE=$(yad --file --title="Select .deb Package" \
+                --text="Choose a .deb file to install:" \
+                --file-filter="Debian Packages | _.deb" --width=600 --height=500)
+              [ -n "$DEB_FILE" ] && install_deb "$DEB_FILE"
+            
+            elif [[ " $CHOICE" == _"featured"_ ]]; then               FEATURED=$(yad --list --checklist --title="Featured Apps" \
+                --text="<b>⭐ Popular Apps for Gamma Linux:</b>" \
+                --column="Install" --column="App" --column="Category" --column="Size" \
+                FALSE "firefox-esr" "Browser" "60MB" \
+                FALSE "chromium" "Browser" "80MB" \
+                FALSE "vlc" "Media" "40MB" \
+                FALSE "gimp" "Graphics" "50MB" \
+                FALSE "libreoffice" "Office" "200MB" \
+                FALSE "code" "Development" "80MB" \
+                FALSE "steam" "Gaming" "50MB" \
+                FALSE "obs-studio" "Recording" "90MB" \
+                --width=700 --height=500 --separator=" " --print-column=2)
+              
+              [ -n "$FEATURED" ] && for app in $FEATURED; do install_package "$app" "$app"; done
+            
+            elif [[ " $CHOICE" == _"installed"_ ]]; then               INSTALLED=$(dpkg --get-selections | grep -v deinstall | cut -f1 | head -500)
+              echo "$INSTALLED" | yad --list --title="Installed Packages" \
+                --text="<b>📊 Currently Installed Packages:</b>" \
+                --column="Package" --width=600 --height=600 \
+                --button="Close:0"
+            
+            elif [[ "$CHOICE" == _"update"* ]]; then
+              (
+              echo "# 10 Updating package lists..."
+              pkexec apt-get update
+              echo "# 50 Upgrading packages..."
+              pkexec apt-get upgrade -y
+              echo "# 90 Cleaning up..."
+              pkexec apt-get autoremove -y
+              echo "# 100 Done!"
+              ) | yad --progress --title="System Update" --text="<b>Updating Gamma Linux...</b>" \
+                --percentage=0 --auto-close --width=500 --height=150
+              yad --info --text="✅ System updated successfully!" --width=350
+            fi
+          done
+          STORE_PRO
+          chmod +x ${BUILD_DIR}/usr/local/bin/gamma-store
+          
+          cat > ${BUILD_DIR}/usr/share/applications/gamma-store.desktop << 'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Gamma Store Pro
+          GenericName=App Center
+          Comment=Advanced App Center - Search & install any package
+          Exec=gamma-store
+          Icon=system-software-install
+          Terminal=false
+          Categories=System;PackageManager;Settings;
+          Keywords=store;apps;install;software;search;deb;
+          StartupNotify=true
+          X-GNOME-UsesNotifications=true
+          EOF
+          
+          dpkg-deb --build ${BUILD_DIR}
+          ls -lh ${PKG_NAME}_${PKG_VERSION}_${ARCH}.deb
+          
+      - name: Upload to Release ${{ github.event.inputs.release_tag }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}           files: gamma-store_${{ github.event.inputs.version }}_all.deb
+          body: |
+            ## 🛒 Gamma Store Pro v${{ github.event.inputs.version }} 
+            
+            *Advanced App Center with Full Search*
+            
+            ### ✨ المزايا الجديدة:
+            - 🔍 *Full APT Search* - Search 60,000+ packages
+            - 📦 *.deb Installer* - Install local .deb files  
+            - 📊 *Progress Bars* - Real-time install progress
+            - ⭐ *Featured Apps* - One-click install popular apps
+            - 🔄 *System Update* - Update Gamma from the store
+            
+            ### 📥 Quick Install:
+            wget https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/${{ github.event.inputs.release_tag }}/gamma-store_${{ github.event.inputs.version }}_all.deb
+            sudo apt install ./gamma-store_${{ github.event.inputs.version }}_all.deb
+_Dedicated to my father Fateh_ ♾️
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
