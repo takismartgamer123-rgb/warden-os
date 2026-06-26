@@ -1,7 +1,7 @@
 name: Build and Upload to v2.1-Royal
 
 on:
-  workflow_dispatch: # زر يدوي من GitHub
+  workflow_dispatch:
 
 jobs:
   build-and-upload:
@@ -16,39 +16,63 @@ jobs:
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y dpkg-dev fakeroot
 
+      - name: Create gamma-store.sh
+        run: |
+          cat > gamma-store.sh <<'EOF'
+          #!/data/data/com.termux/files/usr/bin/bash
+          # Gamma Store Pro v3.1 - Play Store Clone Final
+          # By Taki - 17yo from Guelma
+          # Special Dedication to Fateh ♾️
+
+          export GTK_THEME=Adwaita:dark
+          export DISPLAY=:0
+
+          SYS_NAME="Gamma Linux"
+          RAM_H=$(free -h | awk '/Mem:/ {print $2}')
+
+          APPS_DB="firefox-esr|Firefox ESR|Modern web browser|Internet|Install
+          vlc|VLC Media Player|Plays everything|Multimedia|Install  
+          libreoffice|LibreOffice|Full Office Suite|Office|Installed"
+
+          CSS="* { background-color: #000; color: #ffffff; }
+               entry { background-color: #1f1f1f; border-radius: 30px; padding: 12px; }
+               button { background-color: #00c853; color: #000; border-radius: 20px; }"
+
+          yad --form --title="Gamma Store Pro" \
+          --text="<big><b>Welcome to Gamma Linux Store</b></big>\nI See that your system is: $SYS_NAME - $RAM_H RAM" \
+          --image="/usr/share/pixmaps/logo.png" --image-on-top \
+          --field=":LBL" --field="Search Apps and Games:ENTRY" \
+          --button="Exit:1" --width=400 --height=700 --center --no-buttons --css="$CSS"
+          EOF
+          chmod +x gamma-store.sh
+
       - name: Build DEB v2.1-Royal
         run: |
           VER="2.1-Royal"
-
           mkdir -p gamma-store-pro_$VER/DEBIAN
           mkdir -p gamma-store-pro_$VER/usr/bin
           mkdir -p gamma-store-pro_$VER/usr/share/applications
           mkdir -p gamma-store-pro_$VER/usr/share/pixmaps
 
           cp gamma-store.sh gamma-store-pro_$VER/usr/bin/gamma-store
-          chmod 755 gamma-store-pro_$VER/usr/bin/gamma-store
-          cp assets/F-logo.png gamma-store-pro_$VER/usr/share/pixmaps/
+          cp assets/logo.png gamma-store-pro_$VER/usr/share/pixmaps/ # يستعمل تاعك
 
           cat > gamma-store-pro_$VER/usr/share/applications/gamma-store.desktop <<EOF
           [Desktop Entry]
           Name=Gamma Store Pro Royal
           Exec=gamma-store
-          Icon=F-logo
+          Icon=logo
           Type=Application
           Categories=Utility;
           EOF
 
-          cat > gamma-store-pro_$VER/DEBIAN/control <<EOF
-          Package: gamma-store-pro
+          echo "Package: gamma-store-pro
           Version: 2.1-Royal
-          Section: utils
-          Priority: optional
           Architecture: all
           Depends: yad, termux-x11-nightly
-          Maintainer: Taki <taki@gammalinex.dev>
+          Maintainer: Taki
           Description: Gamma Store Pro v2.1-Royal
-           Special Dedication to Fateh ∞
-          EOF
+           Special Dedication to Fateh ∞" > gamma-store-pro_$VER/DEBIAN/control
 
           dpkg-deb --build gamma-store-pro_$VER
           mv gamma-store-pro_$VER.deb gamma-store-pro_2.1-Royal_all.deb
