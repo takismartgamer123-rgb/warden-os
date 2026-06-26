@@ -9,7 +9,7 @@ Because no PC deserves to die.
 BY: Taki | 17 Years Old | From Guelma, Algeria
 SPECIAL DEDICATION: To my father, Fateh ∞
 
- 0. CRITICAL WARNING - READ THIS OR LOSE WINDOWS
+ ****0. CRITICAL WARNING - READ THIS OR LOSE WINDOWS****
 
 !!! IF YOU DUAL BOOT WITH WINDOWS 10/11!!!
 You MUST disable these in Windows BEFORE installing Gamma:
@@ -79,14 +79,14 @@ Fatih Pro : 2GB RAM, 8GB Disk, 64-bit CPU
 **[B6] TOO MUCH SWAP USAGE ON 512MB RAM**
   Fix: Already tuned. Swappiness=10. Close browser tabs if lag.
 
- 6. CHECKSUMS & VERIFY
+ **6. CHECKSUMS & VERIFY**
 
 Command: sha256sum -c SHA256SUMS.txt
 
- 7. CONTACT & COMMUNITY
+ **7. CONTACT & COMMUNITY**
 
 Telegram Group: t.me/GammaLinuxDZ <- Main Support & Chat
 GitHub: https://github.com/takismartgamer123-rgb/Gamma-linux
 See CONTRIBUTE.txt for how to help.
 
-Made with rage, coffee, and 7-minute CI/CD in Algeria 🇩🇿
+******Made with rage, coffee, and 7-minute CI/CD in Algeria 🇩🇿******
