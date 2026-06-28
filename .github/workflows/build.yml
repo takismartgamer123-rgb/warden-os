@@ -57,7 +57,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y squashfs-tools xorriso wget rsync zstd isolinux syslinux-utils shim-signed grub-efi-amd64-signed
-          # نحينا genisoimage كامل... بالسلامة
 
       - name: Download Gamma Assets
         run: |
@@ -272,21 +271,17 @@ jobs:
           echo "=== CHECK BIOS ===" && ls -l ext/boot/syslinux/
           echo "=== CHECK UEFI ===" && ls -l ext/EFI/BOOT/
 
-      - name: Build ISO SMART Hybrid with XORRISO
+      - name: Build ISO SMART Hybrid with XORRISO OLD SCHOOL
         run: |
           sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-SMART - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
-
-          # وداعا genisoimage... مرحبا بالملك xorriso
           sudo xorriso -as mkisofs \
-            -iso-level 3 -r -V "GAMMA_${{ matrix.name }}" -J -joliet-long -cache-inodes \
+            -iso-level 3 -r -V "GAMMA_${{ matrix.name }}" -J -joliet-long \
             -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table \
-            -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot -isohybrid-gpt-basdat \
-            -append_partition 2 0xef ext/EFI/BOOT/BOOTX64.EFI \
-            -appended_part_source ext/EFI/BOOT/BOOTX64.EFI \
+            -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot \
+            -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
             -outdev "../gamma-${{ matrix.name }}.iso" \
-            -graft-points -map ext/ /
-
-          echo "Hybrid ISO Created: BIOS+UEFI with XORRISO"
+            ext/
+          echo "Hybrid ISO Created: BIOS+UEFI with XORRISO OLD SCHOOL"
           ls -lh gamma-${{ matrix.name }}.iso
 
       - name: Upload ISO as Artifact
