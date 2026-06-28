@@ -59,7 +59,7 @@ jobs:
       - name: Install Build Tools - HYBRID FIX
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso wget rsync zstd isolinux syslinux-utils syslinux-common shim-signed grub-efi-amd64-signed
+          sudo apt-get install -y squashfs-tools xorriso wget rsync zstd isolinux syslinux-utils syslinux-common shim-signed grub-efi-amd64-signed mtools dosfstools
 
       - name: Download Gamma Assets
         run: |
@@ -91,10 +91,10 @@ jobs:
       - name: Prepare Chroot Environment
         run: |
           sudo rsync -a base/ ext/ --exclude=/${{ env.SQUASHFS_DIR }}/filesystem.squashfs
-          sudo rm -rf ext/isolinux
-          sudo mkdir -p ext/isolinux
-          sudo cp /usr/lib/ISOLINUX/isolinux.bin ext/isolinux/
-          sudo chmod 644 ext/isolinux/isolinux.bin
+          sudo rm -rf ext/isolinux ext/boot/isolinux
+          sudo mkdir -p ext/boot/isolinux # FIX 1: المسار الصحيح تاع BIOS
+          sudo cp /usr/lib/ISOLINUX/isolinux.bin ext/boot/isolinux/
+          sudo chmod 644 ext/boot/isolinux/isolinux.bin
           sudo rm -rf chroot
           sudo rsync -a --delete squashfs-root/ chroot/
           sudo mount --bind /dev chroot/dev
@@ -223,32 +223,33 @@ jobs:
             sudo du -sx --block-size=1 chroot | cut -f1 | sudo tee ext/live/filesystem.size
           fi
 
-      - name: Prepare Syslinux + UEFI SMART - BIOS FIX
+      - name: Prepare Syslinux + UEFI SMART - FIXED
         run: |
-          sudo mkdir -p ext/boot/syslinux ext/EFI/BOOT
+          # FIX 1: BIOS Modules في المسار الصحيح
+          sudo mkdir -p ext/boot/syslinux
           for file in ldlinux.c32 libutil.c32 libcom32.c32 menu.c32 reboot.c32 vesamenu.c32; do
-            if [ -f /usr/lib/syslinux/modules/bios/$file ]; then
-              sudo cp /usr/lib/syslinux/modules/bios/$file ext/boot/syslinux/
-              echo "Copied $file"
-            else
-              echo "FATAL: $file not found. syslinux-common missing"
-              exit 1
-            fi
+            sudo cp /usr/lib/syslinux/modules/bios/$file ext/boot/syslinux/
           done
-          sudo cp /usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed ext/EFI/BOOT/BOOTX64.EFI
-          echo "=== CHECK BIOS ===" && ls -l ext/boot/syslinux/
-          echo "=== CHECK UEFI ===" && ls -l ext/EFI/BOOT/
 
-      - name: Build ISO HYBRID BIOS+UEFI
+          # FIX 2: EFI FAT Image مشي BOOTX64.EFI برك
+          dd if=/dev/zero of=efiboot.img bs=1M count=10
+          mkfs.vfat efiboot.img
+          mmd -i efiboot.img ::/EFI ::/EFI/BOOT
+          mcopy -i efiboot.img /usr/lib/grub/x86_64-efi-signed/grubx64.efi.signed ::/EFI/BOOT/BOOTX64.EFI
+
+          echo "=== CHECK BIOS ===" && ls -l ext/boot/syslinux/
+          echo "=== CHECK UEFI ===" && ls -l efiboot.img
+
+      - name: Build ISO HYBRID BIOS+UEFI - FIXED
         run: |
-          sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-FINAL - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
+          sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-FINAL - Guelma/g' ext/boot/isolinux/isolinux.cfg 2>/dev/null || true
           sudo xorriso -as mkisofs \
             -iso-level 3 -r -V "GAMMA_${{ matrix.name }}" -J -joliet-long \
-            -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table \
-            -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI \
-            -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+            -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table \ # FIX 1: boot/isolinux
+            -eltorito-alt-boot -e efiboot.img -no-emul-boot \ # FIX 2: efiboot.img
+            -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \ # FIX 3: MBR Hybrid
             -o "../gamma-${{ matrix.name }}.iso" \
-            ext/
+            ext/ efiboot.img
           echo "ISO Built Successfully: gamma-${{ matrix.name }}.iso"
           ls -lh../gamma-${{ matrix.name }}.iso
 
