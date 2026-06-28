@@ -271,17 +271,18 @@ jobs:
           echo "=== CHECK BIOS ===" && ls -l ext/boot/syslinux/
           echo "=== CHECK UEFI ===" && ls -l ext/EFI/BOOT/
 
-      - name: Build ISO SMART Hybrid with XORRISO OLD SCHOOL
+      - name: Build ISO SMART Hybrid with XORRISO
         run: |
           sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-SMART - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
+
+          # السر: اسم الـ ISO في الاخير... بلا -outdev
           sudo xorriso -as mkisofs \
             -iso-level 3 -r -V "GAMMA_${{ matrix.name }}" -J -joliet-long \
             -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table \
             -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot \
             -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
-            -outdev "../gamma-${{ matrix.name }}.iso" \
-            ext/
-          echo "Hybrid ISO Created: BIOS+UEFI with XORRISO OLD SCHOOL"
+            ext/ "../gamma-${{ matrix.name }}.iso"
+
           ls -lh gamma-${{ matrix.name }}.iso
 
       - name: Upload ISO as Artifact
