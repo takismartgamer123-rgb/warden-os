@@ -1,4 +1,4 @@
-name: Build Gamma Linux v2.3.0-FINAL ♾️🇩🇿
+name: Build Gamma Linux v2.3.0-FINAL ♾️🇩🇿 HYBRID BOOT
 on:
   workflow_dispatch:
     inputs:
@@ -7,40 +7,28 @@ on:
         required: true
         default: 'v2.3.0-FINAL'
   push:
-    tags:
-      - 'v*'
+    tags: - 'v*'
 permissions:
   contents: write
-
 jobs:
   build-release:
     runs-on: ubuntu-22.04
     timeout-minutes: 120
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: pro-maxmini
-            desc: "Gamma Fatih Pro - For 2GB-4GB RAM"
-            base_url: https://archive.org/download/bodhi-7.0.0-64/bodhi-7.0.0-64.iso
-            ui: "LXQt 1.4"
-            base: "ubuntu"
-            installer: "ubiquity"
-            ram: "2GB+"
-          - name: lite-ghost
-            desc: "Gamma Lite Ghost - For 1GB RAM"
-            base_url: https://archive.org/download/bodhi-7.0.0-64/bodhi-7.0.0-64.iso
-            ui: "LXQt 1.4"
-            base: "ubuntu"
-            installer: "ubiquity"
-            ram: "1GB"
-          - name: legacy-32
-            desc: "Gamma Legacy 32 - For Old PCs"
-            base_url: https://downloads.sourceforge.net/project/bodhilinux/7.0.0-beta/bodhi-7.0.0-legacy-beta.iso
-            ui: "LXQt 1.4"
-            base: "debian"
-            installer: "calamares"
-            ram: "512MB"
+    strategy: fail-fast: false
+    matrix:
+      include:
+        - name: pro-maxmini
+          desc: "Gamma Fatih Pro - For 2GB-4GB RAM"
+          base_url: https://archive.org/download/bodhi-7.0.0-64/bodhi-7.0.0-64.iso
+          ui: "LXQt 1.4" base: "ubuntu" installer: "ubiquity" ram: "2GB+"
+        - name: lite-ghost
+          desc: "Gamma Lite Ghost - For 1GB RAM"
+          base_url: https://archive.org/download/bodhi-7.0.0-64/bodhi-7.0.0-64.iso
+          ui: "LXQt 1.4" base: "ubuntu" installer: "ubiquity" ram: "1GB"
+        - name: legacy-32
+          desc: "Gamma Legacy 32 - For Old PCs"
+          base_url: https://downloads.sourceforge.net/project/bodhilinux/7.0.0-beta/bodhi-7.0.0-legacy-beta.iso
+          ui: "LXQt 1.4" base: "debian" installer: "calamares" ram: "512MB"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -53,10 +41,11 @@ jobs:
           sudo apt-get clean
           df -h
 
-      - name: Install Build Tools
+      - name: Install Build Tools - HYBRID FIX
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso wget rsync zstd isolinux syslinux-utils shim-signed grub-efi-amd64-signed
+          sudo apt-get install -y squashfs-tools xorriso wget rsync zstd isolinux syslinux-utils syslinux-common shim-signed grub-efi-amd64-signed
+          # syslinux-common = سر البوت تاع BIOS. بلا بيه = ISO ميت
 
       - name: Download Gamma Assets
         run: |
@@ -104,43 +93,29 @@ jobs:
 
       - name: Fix APT and Sources
         run: |
-          sudo chroot chroot bash -c "
-            killall apt-get dpkg 2>/dev/null || true
-            rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* /var/lib/dpkg/lock-frontend
-            rm -rf /var/lib/dpkg/updates/*
-            dpkg --configure -a || true
-            apt-get install -f -y || true
-          "
+          sudo chroot chroot bash -c "killall apt-get dpkg 2>/dev/null || true; rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock* /var/lib/dpkg/lock-frontend rm -rf /var/lib/dpkg/updates/*; dpkg --configure -a || true; apt-get install -f -y || true"
           sudo rm -f chroot/etc/apt/sources.list.d/* || true
           if [ "${{ matrix.base }}" = "ubuntu" ]; then
             sudo tee chroot/etc/apt/sources.list << 'EOF'
-          deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
-          EOF
+deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
+deb http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
+EOF
           else
             sudo tee chroot/etc/apt/sources.list << 'EOF'
-          deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
-          deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
-          deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
-          EOF
+deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
+EOF
           fi
           sudo chroot chroot apt-get update -y
 
-      - name: Install Gamma Core Packages
+      - name: Install Gamma Core Packages - ROYAL UI
         run: |
-          sudo chroot chroot apt-get remove -y --purge moksha* e17* enlightenment* || true
-          sudo chroot chroot apt-get remove -y --purge bodhi-artwork bodhi-theme-moksha || true
-          sudo chroot chroot apt-get remove -y --purge avahi-daemon cups-pk-helper cups-browsed || true
-          sudo chroot chroot apt-get remove -y --purge midori* netsurf* epad* leafpad* terminology* || true
-          sudo chroot chroot apt-get remove -y --purge snapd* flatpak* || true
+          sudo chroot chroot apt-get remove -y --purge moksha* e17* enlightenment* bodhi-artwork bodhi-theme-moksha avahi-daemon cups-pk-helper cups-browsed midori* netsurf* epad* leafpad* terminology* snapd* flatpak* || true
           sudo chroot chroot apt-get autoremove --purge -y || true
-          sudo chroot chroot apt-get install -y --no-install-recommends lxqt-core lxqt-themes openbox pcmanfm-qt
-          sudo chroot chroot apt-get install -y --no-install-recommends materia-gtk-theme papirus-icon-theme fonts-noto-core fonts-noto-color-emoji
-          sudo chroot chroot apt-get install -y --no-install-recommends lightdm lightdm-gtk-greeter lxqt-sudo
-          sudo chroot chroot apt-get install -y --no-install-recommends zram-tools preload tlp zenity curl wget
-          sudo chroot chroot apt-get install -y --no-install-recommends adwaita-icon-theme hicolor-icon-theme
+          sudo chroot chroot apt-get install -y --no-install-recommends lxqt-core lxqt-themes openbox pcmanfm-qt materia-gtk-theme papirus-icon-theme fonts-noto-core fonts-noto-color-emoji lightdm lightdm-gtk-greeter lxqt-sudo zram-tools preload tlp zenity curl wget adwaita-icon-theme hicolor-icon-theme
           if [ "${{ matrix.installer }}" = "ubiquity" ]; then
             sudo chroot chroot apt-get install -y --no-install-recommends ubiquity ubiquity-frontend-gtk ubiquity-slideshow-ubuntu ubiquity-casper casper
           else
@@ -150,16 +125,7 @@ jobs:
 
       - name: Configure Gamma System
         run: |
-          sudo chroot chroot bash -c "
-            mkdir -p /etc/lightdm/lightdm.conf.d
-            echo '[Seat:*]' > /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf
-            echo 'user-session=lxqt' >> /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf
-            echo 'autologin-user=gamma' >> /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf
-            echo 'autologin-user-timeout=0' >> /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf
-            useradd -m -s /bin/bash gamma || true
-            usermod -aG sudo gamma || true
-            echo 'gamma:gamma' | chpasswd
-          "
+          sudo chroot chroot bash -c "mkdir -p /etc/lightdm/lightdm.conf.d; echo -e '[Seat:*]\nuser-session=lxqt\nautologin-user=gamma\nautologin-user-timeout=0' > /etc/lightdm/lightdm.conf.d/50-gamma-autologin.conf; useradd -m -s /bin/bash gamma || true; usermod -aG sudo gamma || true; echo 'gamma:gamma' | chpasswd"
           sudo mkdir -p chroot/usr/share/backgrounds chroot/usr/share/pixmaps chroot/usr/share/icons/hicolor/256x256/apps chroot/usr/share/icons/hicolor/48x48/apps
           sudo cp gamma-wallpaper.jpg chroot/usr/share/backgrounds/gamma-wallpaper.jpg
           sudo cp gamma-logo.png chroot/usr/share/pixmaps/gamma-logo.png
@@ -167,84 +133,63 @@ jobs:
           sudo cp gamma-logo.png chroot/usr/share/icons/hicolor/48x48/apps/gamma-logo.png
           sudo mkdir -p chroot/etc/skel/.config/lxqt
           sudo tee chroot/etc/skel/.config/lxqt/lxqt.conf << 'EOF'
-          [General]
-          icon_theme=Papirus-Dark
-          theme=Gamma-Dark
-          [Qt]
-          style=Fusion
-          EOF
+[General]
+icon_theme=Papirus-Dark
+theme=Gamma-Dark
+[Qt]
+style=Fusion
+EOF
           sudo mkdir -p chroot/etc/skel/Desktop
           if [ "${{ matrix.installer }}" = "ubiquity" ]; then
             sudo tee chroot/etc/skel/Desktop/install-gamma.desktop << 'EOF'
-          [Desktop Entry]
-          Type=Application
-          Name=Install Gamma Linux
-          Comment=Install Gamma Linux to your hard drive
-          Exec=pkexec ubiquity gtk_ui
-          Icon=gamma-logo
-          Categories=System;Settings;
-          Keywords=install;system;
-          EOF
+[Desktop Entry]
+Type=Application
+Name=Install Gamma Linux
+Exec=pkexec ubiquity gtk_ui
+Icon=gamma-logo
+EOF
           else
             sudo tee chroot/etc/skel/Desktop/install-gamma.desktop << 'EOF'
-          [Desktop Entry]
-          Type=Application
-          Name=Install Gamma Linux
-          Comment=Install Gamma Linux to your hard drive
-          Exec=pkexec calamares
-          Icon=gamma-logo
-          Categories=System;Settings;
-          Keywords=install;system;
-          EOF
+[Desktop Entry]
+Type=Application
+Name=Install Gamma Linux
+Exec=pkexec calamares
+Icon=gamma-logo
+EOF
           fi
           sudo chmod +x chroot/etc/skel/Desktop/install-gamma.desktop
 
       - name: Create Gamma Tools
         run: |
           sudo tee chroot/usr/local/bin/gamma-theme << 'EOF'
-          #!/bin/bash
-          THEME=$1
-          if [ "$THEME" = "gamma" ]; then
-            pcmanfm-qt --set-wallpaper=/usr/share/backgrounds/gamma-wallpaper.jpg
-            sed -i 's/theme=.*/theme=Gamma-Dark/' ~/.config/lxqt/lxqt.conf
-            sed -i 's/icon_theme=.*/icon_theme=Papirus-Dark/' ~/.config/lxqt/lxqt.conf
-            notify-send "Gamma Linux" "Gamma Theme Activated - Maximum Power"
-          elif [ "$THEME" = "king" ]; then
-            pcmanfm-qt --set-wallpaper=/usr/share/backgrounds/gamma-wallpaper.jpg
-            sed -i 's/theme=.*/theme=Materia-Dark/' ~/.config/lxqt/lxqt.conf
-            sed -i 's/icon_theme=.*/icon_theme=Papirus-Dark/' ~/.config/lxqt/lxqt.conf
-            notify-send "Gamma Linux" "Royal Theme Activated"
-          fi
-          EOF
+#!/bin/bash
+THEME=$1
+if [ "$THEME" = "gamma" ]; then pcmanfm-qt --set-wallpaper=/usr/share/backgrounds/gamma-wallpaper.jpg; sed -i 's/theme=.*/theme=Gamma-Dark/' ~/.config/lxqt/lxqt.conf; sed -i 's/icon_theme=.*/icon_theme=Papirus-Dark/' ~/.config/lxqt/lxqt.conf; notify-send "Gamma Linux" "Gamma Theme Activated - Maximum Power";
+elif [ "$THEME" = "king" ]; then pcmanfm-qt --set-wallpaper=/usr/share/backgrounds/gamma-wallpaper.jpg; sed -i 's/theme=.*/theme=Materia-Dark/' ~/.config/lxqt/lxqt.conf; sed -i 's/icon_theme=.*/icon_theme=Papirus-Dark/' ~/.config/lxqt/lxqt.conf; notify-send "Gamma Linux" "Royal Theme Activated"; fi
+EOF
           sudo chmod +x chroot/usr/local/bin/gamma-theme
           sudo tee chroot/usr/local/bin/gamma-setup << 'EOF'
-          #!/bin/bash
-          zenity --info --title="Gamma Linux Setup" --text="Welcome to Gamma Linux\nUI: LXQt 1.4 Royal Edition\nMaximum Power, Minimum RAM\nAlpha failed. Beta crashed. Gamma survives\nBecause no PC deserves to die\nDedicated to my father Fateh" --width=450 --height=300
-          BROWSER=$(zenity --list --radiolist --title="Choose Browser" --text="Pick your browser:" --column="Select" --column="Browser" TRUE "falkon" FALSE "firefox-esr" FALSE "chromium" --height=300)
-          apt-get update
-          apt-get install -y --no-install-recommends $BROWSER htop zenity
-          zenity --info --title="Setup Complete" --text="Gamma Linux Ready!\n\n- Taki from Guelma, Algeria\nDedicated to my father Fateh" --width=450
-          EOF
+#!/bin/bash
+zenity --info --title="Gamma Linux Setup" --text="Welcome to Gamma Linux\nUI: LXQt 1.4 Royal Edition\nMaximum Power, Minimum RAM\nAlpha failed. Beta crashed. Gamma survives\nDedicated to my father Fateh" --width=450 --height=300
+BROWSER=$(zenity --list --radiolist --title="Choose Browser" --text="Pick your browser:" --column="Select" --column="Browser" TRUE "falkon" FALSE "firefox-esr" FALSE "chromium" --height=300)
+apt-get update && apt-get install -y --no-install-recommends $BROWSER htop zenity
+zenity --info --title="Setup Complete" --text="Gamma Linux Ready!\n\n- Taki from Guelma, Algeria\nDedicated to my father Fateh" --width=450
+EOF
           sudo chmod +x chroot/usr/local/bin/gamma-setup
           sudo mkdir -p chroot/etc/skel/.config/autostart
           sudo tee chroot/etc/skel/.config/autostart/gamma-setup.desktop << 'EOF'
-          [Desktop Entry]
-          Type=Application
-          Name=Gamma Setup
-          Exec=gamma-setup
-          X-GNOME-Autostart-enabled=true
-          EOF
+[Desktop Entry]
+Type=Application
+Name=Gamma Setup
+Exec=gamma-setup
+X-GNOME-Autostart-enabled=true
+EOF
 
       - name: Cleanup and Compress
         run: |
           sudo chroot chroot bash -c "apt-get autoremove --purge -y || true; apt-get clean || true"
-          sudo chroot chroot rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/*
-          sudo chroot chroot rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/info/*
-          sudo umount chroot/dev/pts || true
-          sudo umount chroot/dev || true
-          sudo umount chroot/run || true
-          sudo umount chroot/proc || true
-          sudo umount chroot/sys || true
+          sudo chroot chroot rm -rf /var/lib/apt/lists/* /var/cache/apt/* /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /usr/share/info/*
+          sudo umount chroot/dev/pts chroot/dev chroot/run chroot/proc chroot/sys || true
           if [ "${{ env.SQUASHFS_DIR }}" = "casper" ]; then
             sudo rm -f ext/casper/filesystem.squashfs
             sudo mksquashfs chroot ext/casper/filesystem.squashfs -comp zstd -Xcompression-level 19 -b 1M -noappend -no-recovery
@@ -255,7 +200,7 @@ jobs:
             sudo du -sx --block-size=1 chroot | cut -f1 | sudo tee ext/live/filesystem.size
           fi
 
-      - name: Prepare Syslinux + UEFI SMART
+      - name: Prepare Syslinux + UEFI SMART - BIOS FIX
         run: |
           sudo mkdir -p ext/boot/syslinux ext/EFI/BOOT
           for file in ldlinux.c32 libutil.c32 libcom32.c32 menu.c32 reboot.c32 vesamenu.c32; do
@@ -263,7 +208,7 @@ jobs:
               sudo cp /usr/lib/syslinux/modules/bios/$file ext/boot/syslinux/
               echo "Copied $file"
             else
-              echo "FATAL: $file not found. Install syslinux-utils"
+              echo "FATAL: $file not found. syslinux-common missing"
               exit 1
             fi
           done
@@ -271,25 +216,25 @@ jobs:
           echo "=== CHECK BIOS ===" && ls -l ext/boot/syslinux/
           echo "=== CHECK UEFI ===" && ls -l ext/EFI/BOOT/
 
-      - name: Build ISO 22.04 with XORRISO MKISOFS MODE - NO LS
+      - name: Build ISO HYBRID BIOS+UEFI
         run: |
           sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-FINAL - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
-
           sudo xorriso -as mkisofs \
             -iso-level 3 -r -V "GAMMA_${{ matrix.name }}" -J -joliet-long \
             -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table \
-            -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot \
+            -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI \
             -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
             -o "../gamma-${{ matrix.name }}.iso" \
             ext/
-
           echo "ISO Built Successfully: gamma-${{ matrix.name }}.iso"
+          ls -lh ../gamma-${{ matrix.name }}.iso # space مصلح
 
       - name: Upload ISO as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: gamma-${{ matrix.name }}
           path: gamma-${{ matrix.name }}.iso
+          if-no-files-found: error
 
   publish-release:
     name: Publish Release v2.3.0-FINAL
@@ -297,43 +242,31 @@ jobs:
     runs-on: ubuntu-latest
     if: success()
     steps:
-      - name: Download all ISOs - TO SUBFOLDERS
+      - name: Download all ISOs
         uses: actions/download-artifact@v4
         with:
-          path: artifacts # <--- نخليها تحطهم في artifacts/الاسم
-
+          path: artifacts
       - name: Merge ISOs to ROOT + SHA256
         run: |
-          echo "=== Files in artifacts/ ==="
-          find artifacts -name "*.iso" # <--- نتاكدو بلي راهم كاينين
+          find artifacts -name "*.iso"
           mkdir -p release-files
-          mv artifacts/*/*.iso release-files/ # <--- نجمعوهم بيدينا
+          mv artifacts/*/*.iso release-files/
           cd release-files
-          ls -lh
           sha256sum *.iso > SHA256SUMS.txt
           cat SHA256SUMS.txt
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.version || 'v2.3.0-FINAL' }}
-          name: Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-FINAL' }} - FINAL Edition
+          name: Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-FINAL' }} - HYBRID BOOT
           body: |
-            ## Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-FINAL' }} - FINAL Edition
+            ## Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-FINAL' }} - HYBRID EDITION
             **Maximum Power, Minimum RAM**
+            **BIOS + UEFI Boot = 100% Compatibility**
             *Alpha failed. Beta crashed. Gamma survives*
-            **Because no PC deserves to die - FINAL Boot**
-            *By: Taki - 17 Years Old from Guelma, Algeria*
-            *Dedicated to my father Fateh* ♾️
-            ### FINAL FIX v2.3.2: Manual Merge from artifacts/*/*.iso
-            ### 3 Editions:
-            **1. Gamma Legacy 32** ~700MB - For 512MB RAM PCs - 280MB RAM Boot
-            **2. Gamma Lite Ghost** ~770MB - For 1GB RAM - 320MB RAM Boot
-            **3. Gamma Fatih Pro** ~850MB - For 2GB+ RAM - 450MB RAM Boot
-            All 3 have zram-tools auto enabled.
-          files: |
-            release-files/*.iso
-            release-files/SHA256SUMS.txt
+            **By: Taki - 17 Years Old from Guelma, Algeria**
+            **Dedicated to my father Fateh** ♾️
+          files: release-files/*
           draft: false
           prerelease: false
         env:
