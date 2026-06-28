@@ -1,11 +1,11 @@
-name: Build Gamma Linux v2.3.0-SMART ♾️🇩🇿
+name: Build Gamma Linux v2.3.0-POTATO ♾️🇩🇿
 on:
   workflow_dispatch:
     inputs:
       version:
         description: 'Release Version e.g: v2.3.0'
         required: true
-        default: 'v2.3.0-SMART'
+        default: 'v2.3.0-POTATO'
   push:
     tags:
       - 'v*'
@@ -53,10 +53,11 @@ jobs:
           sudo apt-get clean
           df -h
 
-      - name: Install Build Tools
+      - name: Install Build Tools POTATO
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso wget rsync zstd isolinux syslinux-utils shim-signed grub-efi-amd64-signed
+          sudo apt-get install -y squashfs-tools cdrkit wget rsync zstd isolinux syslinux-utils shim-signed grub-efi-amd64-signed
+          # cdrkit = فيه mkisofs الصح
 
       - name: Download Gamma Assets
         run: |
@@ -271,21 +272,21 @@ jobs:
           echo "=== CHECK BIOS ===" && ls -l ext/boot/syslinux/
           echo "=== CHECK UEFI ===" && ls -l ext/EFI/BOOT/
 
-      - name: Build ISO SMART Hybrid with XORRISO CD HACK
+      - name: Build ISO POTATO with MKISOFS
         run: |
-          sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-SMART - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
+          sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-POTATO - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
 
-          # السر: ندخلو داخل ext/ باش ما يشوفش الـ ISO الجديد
           cd ext
-          sudo xorriso -as mkisofs \
+          sudo mkisofs \
             -iso-level 3 -r -V "GAMMA_${{ matrix.name }}" -J -joliet-long \
             -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table \
             -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot \
             -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
-            -outdev "../gamma-${{ matrix.name }}.iso" \
+            -o "../gamma-${{ matrix.name }}.iso" \
            .
           cd..
 
+          sudo isohybrid gamma-${{ matrix.name }}.iso
           ls -lh gamma-${{ matrix.name }}.iso
 
       - name: Upload ISO as Artifact
@@ -295,7 +296,7 @@ jobs:
           path: gamma-${{ matrix.name }}.iso
 
   publish-release:
-    name: Publish Release v2.3.0-SMART
+    name: Publish Release v2.3.0-POTATO
     needs: build-release
     runs-on: ubuntu-latest
     if: success()
@@ -314,16 +315,16 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version || 'v2.3.0-SMART' }}
-          name: Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-SMART' }} - SMART Edition
+          tag_name: ${{ github.event.inputs.version || 'v2.3.0-POTATO' }}
+          name: Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-POTATO' }} - POTATO Edition
           body: |
-            ## Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-SMART' }} - SMART Edition
+            ## Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-POTATO' }} - POTATO Edition
             **Maximum Power, Minimum RAM**
             *Alpha failed. Beta crashed. Gamma survives*
-            **Because no PC deserves to die - SMART Boot**
+            **Because no PC deserves to die - POTATO Boot**
             *By: Taki - 17 Years Old from Guelma, Algeria*
             *Dedicated to my father Fateh* ♾️
-            ### SMART Feature: Auto-Detects BIOS+UEFI Files
+            ### POTATO Feature: mkisofs from cdrkit
             ### 3 Editions:
             **1. Gamma Legacy 32** ~700MB - For 512MB RAM PCs
             **2. Gamma Lite Ghost** ~770MB - For 1GB RAM
