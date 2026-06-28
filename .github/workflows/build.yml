@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
-    matrix:
+  matrix:
       include:
         - name: pro-maxmini
           desc: "Gamma Fatih Pro - For 2GB-4GB RAM"
