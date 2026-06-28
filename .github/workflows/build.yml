@@ -1,11 +1,11 @@
-name: Build Gamma Linux v2.3.0-POTATO ♾️🇩🇿
+name: Build Gamma Linux v2.3.0-FINAL ♾️🇩🇿
 on:
   workflow_dispatch:
     inputs:
       version:
         description: 'Release Version e.g: v2.3.0'
         required: true
-        default: 'v2.3.0-POTATO'
+        default: 'v2.3.0-FINAL'
   push:
     tags:
       - 'v*'
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04 # السر هنا... 20.04 فيها genisoimage الصح
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -53,11 +53,10 @@ jobs:
           sudo apt-get clean
           df -h
 
-      - name: Install Build Tools POTATO
+      - name: Install Build Tools FINAL
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools cdrkit wget rsync zstd isolinux syslinux-utils shim-signed grub-efi-amd64-signed
-          # cdrkit = فيه mkisofs الصح
+          sudo apt-get install -y squashfs-tools genisoimage wget rsync zstd isolinux syslinux-utils shim-signed grub-efi-amd64-signed
 
       - name: Download Gamma Assets
         run: |
@@ -115,16 +114,16 @@ jobs:
           sudo rm -f chroot/etc/apt/sources.list.d/* || true
           if [ "${{ matrix.base }}" = "ubuntu" ]; then
             sudo tee chroot/etc/apt/sources.list << 'EOF'
-          deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
+          deb http://archive.ubuntu.com/ubuntu focal main restricted universe multiverse
+          deb http://archive.ubuntu.com/ubuntu focal-updates main restricted universe multiverse
+          deb http://archive.ubuntu.com/ubuntu focal-security main restricted universe multiverse
+          deb http://archive.ubuntu.com/ubuntu focal-backports main restricted universe multiverse
           EOF
           else
             sudo tee chroot/etc/apt/sources.list << 'EOF'
-          deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
-          deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
-          deb http://deb.debian.org/debian bookworm-updates main contrib non-free non-free-firmware
+          deb http://deb.debian.org/debian buster main contrib non-free
+          deb http://deb.debian.org/debian-security buster/updates main contrib non-free
+          deb http://deb.debian.org/debian buster-updates main contrib non-free
           EOF
           fi
           sudo chroot chroot apt-get update -y
@@ -272,12 +271,12 @@ jobs:
           echo "=== CHECK BIOS ===" && ls -l ext/boot/syslinux/
           echo "=== CHECK UEFI ===" && ls -l ext/EFI/BOOT/
 
-      - name: Build ISO POTATO with MKISOFS
+      - name: Build ISO FINAL with GENISOIMAGE
         run: |
-          sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-POTATO - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
+          sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-FINAL - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
 
           cd ext
-          sudo mkisofs \
+          sudo genisoimage \
             -iso-level 3 -r -V "GAMMA_${{ matrix.name }}" -J -joliet-long \
             -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table \
             -eltorito-alt-boot -e EFI/BOOT/BOOTX64.EFI -no-emul-boot \
@@ -286,7 +285,6 @@ jobs:
            .
           cd..
 
-          sudo isohybrid gamma-${{ matrix.name }}.iso
           ls -lh gamma-${{ matrix.name }}.iso
 
       - name: Upload ISO as Artifact
@@ -296,7 +294,7 @@ jobs:
           path: gamma-${{ matrix.name }}.iso
 
   publish-release:
-    name: Publish Release v2.3.0-POTATO
+    name: Publish Release v2.3.0-FINAL
     needs: build-release
     runs-on: ubuntu-latest
     if: success()
@@ -315,16 +313,16 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version || 'v2.3.0-POTATO' }}
-          name: Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-POTATO' }} - POTATO Edition
+          tag_name: ${{ github.event.inputs.version || 'v2.3.0-FINAL' }}
+          name: Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-FINAL' }} - FINAL Edition
           body: |
-            ## Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-POTATO' }} - POTATO Edition
+            ## Gamma Linux ${{ github.event.inputs.version || 'v2.3.0-FINAL' }} - FINAL Edition
             **Maximum Power, Minimum RAM**
             *Alpha failed. Beta crashed. Gamma survives*
-            **Because no PC deserves to die - POTATO Boot**
+            **Because no PC deserves to die - FINAL Boot**
             *By: Taki - 17 Years Old from Guelma, Algeria*
             *Dedicated to my father Fateh* ♾️
-            ### POTATO Feature: mkisofs from cdrkit
+            ### FINAL Feature: Ubuntu 20.04 + genisoimage
             ### 3 Editions:
             **1. Gamma Legacy 32** ~700MB - For 512MB RAM PCs
             **2. Gamma Lite Ghost** ~770MB - For 1GB RAM
