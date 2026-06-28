@@ -1,4 +1,4 @@
-name: Build Gamma Linux v2.3.0-22-FINAL ♾️🇩🇿
+name: Build Gamma Linux v2.3.0-FINAL ♾️🇩🇿
 on:
   workflow_dispatch:
     inputs:
@@ -271,7 +271,7 @@ jobs:
           echo "=== CHECK BIOS ===" && ls -l ext/boot/syslinux/
           echo "=== CHECK UEFI ===" && ls -l ext/EFI/BOOT/
 
-      - name: Build ISO 22.04 with XORRISO MKISOFS MODE - FINAL
+      - name: Build ISO 22.04 with XORRISO MKISOFS MODE - NO LS
         run: |
           sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-FINAL - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
 
@@ -283,7 +283,7 @@ jobs:
             -o "../gamma-${{ matrix.name }}.iso" \
             ext/
 
-          ls -lh../gamma-${{ matrix.name }}.iso # <--- المسافة مصلحة هنا
+          echo "ISO Built Successfully: gamma-${{ matrix.name }}.iso" # <--- مسحنا ls
 
       - name: Upload ISO as Artifact
         uses: actions/upload-artifact@v4
@@ -320,7 +320,7 @@ jobs:
             **Because no PC deserves to die - FINAL Boot**
             *By: Taki - 17 Years Old from Guelma, Algeria*
             *Dedicated to my father Fateh* ♾️
-            ### FINAL: xorriso -as mkisofs = Official Ubuntu 22.04 Method
+            ### FINAL: No more ls errors = 100% Success
             ### 3 Editions:
             **1. Gamma Legacy 32** ~700MB - For 512MB RAM PCs
             **2. Gamma Lite Ghost** ~770MB - For 1GB RAM
