@@ -277,7 +277,6 @@ jobs:
         run: |
           # ما نلمسوش grub.cfg خاطر يكسر UEFI
           sudo sed -i 's/Bodhi Linux/Gamma Linux v2.3.0-SMART - Guelma/g' ext/isolinux/isolinux.cfg 2>/dev/null || true
-          cd ext
 
           # === يدور على البوت لودرز وحدو ===
           BIOS_BOOT=""
@@ -304,8 +303,8 @@ jobs:
           sudo genisoimage -D -r -V "GAMMA_${{ matrix.name }}" -cache-inodes -J -l \
             $BIOS_BOOT \
             $EFI_BOOT \
-            -o "../gamma-${{ matrix.name }}.iso".
-          cd..
+            -o "../gamma-${{ matrix.name }}.iso" ext/
+          cd ..
 
           if [ -n "$BIOS_BOOT" ] && [ -n "$EFI_BOOT" ]; then
             sudo isohybrid --uefi --mbr gamma-${{ matrix.name }}.iso
