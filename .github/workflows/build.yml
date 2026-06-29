@@ -137,6 +137,9 @@ jobs:
         
         sudo chroot chroot apt-get install -y --no-install-recommends ${{ matrix.packages }}
         
+        # إجبار النظام على بناء الـ initramfs لضمان وجود ملفات الإقلاع
+        sudo chroot chroot update-initramfs -c -k all || true
+        
         if [ "${{ matrix.base }}" = "debian" ]; then
           echo "ZRAM_SIZE_PERCENT=${{ matrix.zram }}" | sudo tee chroot/etc/default/zramswap
         else
@@ -158,12 +161,12 @@ jobs:
           sudo mkdir -p chroot/usr/share/backgrounds && sudo cp gamma-wallpaper.jpg chroot/usr/share/backgrounds/gamma-wallpaper.jpg || true
         fi
         
+        # لقطة ذكية لالتقاط الـ Kernel والـ Initrd من مجلد boot أو مجلد الجذر الرئيسي مباشرة
+        VMLINUZ_FILE=$(ls chroot/boot/vmlinuz-* chroot/vmlinuz 2>/dev/null | head -n 1)
+        INITRD_FILE=$(ls chroot/boot/initrd.img-* chroot/boot/initrd-* chroot/initrd.img 2>/dev/null | head -n 1)
+        
         sudo umount chroot/dev chroot/run chroot/proc chroot/sys || true
         
-        # كود ذكي وحاسم لجلب وإيجاد ملفات الإقلاع دون أي فشل
-        VMLINUZ_FILE=$(find chroot/boot/ -name "vmlinuz-*" | head -n 1)
-        INITRD_FILE=$(find chroot/boot/ \( -name "initrd.img-*" -o -name "initrd-*" \) | head -n 1)
-
         if [ "${{ matrix.base }}" = "debian" ]; then
           mkdir -p iso/live iso/boot/isolinux iso/boot/grub
           sudo mksquashfs chroot iso/live/filesystem.squashfs -comp zstd -Xcompression-level 15 -b 1M -noappend
