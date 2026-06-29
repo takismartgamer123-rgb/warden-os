@@ -33,6 +33,8 @@ jobs:
             uefi: "ia32"
             label: "Gamma Legacy-32"
             release_suffix: "legacy32"
+            boot_opts: "boot=live quiet splash"
+            inst_opts: "boot=live quiet splash autostart=calamares"
             body: |
               ## Gamma Legacy-32 ${{ github.event.inputs.version }} ♾️🇩🇿
               **For 512MB RAM PCs | Debian 12 i386**
@@ -44,7 +46,6 @@ jobs:
             arch: amd64
             base: ubuntu
             timeout: 120
-            # تصحيح أسماء الحزم المتوافقة مع أوبونتو Jammy الرسمية ديركت
             packages: "linux-image-generic lxqt-core lxqt-themes papirus-icon-theme materia-gtk-theme lightdm slick-greeter zram-config tlp ubiquity ubiquity-frontend-gtk"
             zram: "50"
             swappiness: "100"
@@ -56,6 +57,8 @@ jobs:
             uefi: "x64"
             label: "Gamma Lite-Ghost"
             release_suffix: "lite-ghost"
+            boot_opts: "boot=casper quiet splash"
+            inst_opts: "boot=casper only-ubiquity quiet splash"
             body: |
               ## Gamma Lite-Ghost ${{ github.event.inputs.version }} ♾️🇩🇿
               **For 1GB RAM PCs | Pure Ubuntu Base | GHOST MODE**
@@ -67,7 +70,6 @@ jobs:
             arch: amd64
             base: ubuntu
             timeout: 120
-            # تصحيح أسماء الحزم المتوافقة مع أوبونتو Jammy الرسمية ديركت
             packages: "linux-image-generic lxqt-core lxqt-themes papirus-icon-theme materia-gtk-theme lightdm slick-greeter zram-config tlp ubiquity ubiquity-frontend-gtk"
             zram: "25"
             swappiness: ""
@@ -79,6 +81,8 @@ jobs:
             uefi: "x64"
             label: "Gamma Pro-MaxMini"
             release_suffix: "pro-maxmini"
+            boot_opts: "boot=casper quiet splash"
+            inst_opts: "boot=casper only-ubiquity quiet splash"
             body: |
               ## Gamma Pro-MaxMini ${{ github.event.inputs.version }} ♾️🇩🇿
               **For 2GB+ RAM PCs | Pure Ubuntu Base**
@@ -119,12 +123,11 @@ jobs:
         sudo mount -t proc none chroot/proc && sudo mount -t sysfs none chroot/sys
         sudo rm -f chroot/etc/resolv.conf && echo 'nameserver 8.8.8.8' | sudo tee chroot/etc/resolv.conf
         
+        # كتابة المستودعات بطريقة تمنع تعارض الـ EOF تماماً
         if [ "${{ matrix.base }}" = "ubuntu" ]; then
-          sudo tee chroot/etc/apt/sources.list << 'EOF'
-          deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
-          deb http://archive.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
-          EOF
+          echo "deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse" | sudo tee chroot/etc/apt/sources.list
+          echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse" | sudo tee -a chroot/etc/apt/sources.list
+          echo "deb http://archive.ubuntu.com/ubuntu jammy-security main restricted universe multiverse" | sudo tee -a chroot/etc/apt/sources.list
         fi
 
         sudo chroot chroot apt-get update
@@ -135,13 +138,12 @@ jobs:
         
         sudo chroot chroot apt-get install -y --no-install-recommends ${{ matrix.packages }}
         
-        # إعداد ملف الـ ZRAM حسب التوزيعة الأساسية المحددة
+        # ضبط الـ ZRAM حسب التوزيعة الأساسية
         if [ "${{ matrix.base }}" = "debian" ]; then
           echo "ZRAM_SIZE_PERCENT=${{ matrix.zram }}" | sudo tee chroot/etc/default/zramswap
         else
-          # لنسخة أوبونتو التي تستخدم zram-config
           sudo mkdir -p chroot/etc/init.d/
-          echo -e "#!/bin/sh\n# Dynamic Gamma ZRAM Config\n/sbin/modprobe zram\necho $(( \$(sysctl -n vm.totalhigh_pages) * 4096 * ${{ matrix.zram }} / 100 )) > /sys/block/zram0/disksize\n/sbin/mkswap /dev/zram0\n/sbin/swapon -p 32767 /dev/zram0" | sudo tee chroot/etc/rc.local
+          echo -e '#!/bin/sh\n/sbin/modprobe zram\necho $(( $(sysctl -n vm.totalhigh_pages) * 4096 * '${{ matrix.zram }}' / 100 )) > /sys/block/zram0/disksize\n/sbin/mkswap /dev/zram0\n/sbin/swapon -p 32767 /dev/zram0' | sudo tee chroot/etc/rc.local
           sudo chmod +x chroot/etc/rc.local || true
         fi
 
@@ -160,6 +162,7 @@ jobs:
         
         sudo umount chroot/dev chroot/run chroot/proc chroot/sys || true
         
+        # بناء الـ ISO وضبط الـ Boot Menu الاحترافي بـ 3 خيارات
         if [ "${{ matrix.base }}" = "debian" ]; then
           mkdir -p iso/live iso/boot/isolinux iso/boot/grub
           sudo mksquashfs chroot iso/live/filesystem.squashfs -comp zstd -Xcompression-level 15 -b 1M -noappend
@@ -174,13 +177,24 @@ jobs:
           
           echo "UI menu.c32
           PROMPT 0
-          MENU TITLE ${{ matrix.label }} Boot
-          TIMEOUT 50
+          MENU TITLE ${{ matrix.label }} Boot Options
+          TIMEOUT 100
           DEFAULT live
+
           LABEL live
-          MENU LABEL Start ${{ matrix.label }} Live
+          MENU LABEL Start ${{ matrix.label }} (Live)
           KERNEL /live/vmlinuz
-          APPEND initrd=/live/initrd.img boot=live quiet splash" | sudo tee iso/boot/isolinux/isolinux.cfg
+          APPEND initrd=/live/initrd.img ${{ matrix.boot_opts }}
+
+          LABEL safe
+          MENU LABEL Start ${{ matrix.label }} (Safe Graphics)
+          KERNEL /live/vmlinuz
+          APPEND initrd=/live/initrd.img ${{ matrix.boot_opts }} nomodeset
+
+          LABEL install
+          MENU LABEL Install ${{ matrix.label }} OS
+          KERNEL /live/vmlinuz
+          APPEND initrd=/live/initrd.img ${{ matrix.inst_opts }}" | sudo tee iso/boot/isolinux/isolinux.cfg
           
           dd if=/dev/zero of=iso/boot/efiboot.img bs=1M count=10
           mkfs.vfat iso/boot/efiboot.img
@@ -204,13 +218,24 @@ jobs:
           
           echo "UI menu.c32
           PROMPT 0
-          MENU TITLE ${{ matrix.label }} Boot
-          TIMEOUT 50
+          MENU TITLE ${{ matrix.label }} Boot Options
+          TIMEOUT 100
           DEFAULT live
+
           LABEL live
-          MENU LABEL Start ${{ matrix.label }} Live
+          MENU LABEL Start ${{ matrix.label }} (Live)
           KERNEL /casper/vmlinuz
-          APPEND initrd=/casper/initrd.lz boot=casper quiet splash" | sudo tee ext/boot/isolinux/isolinux.cfg
+          APPEND initrd=/casper/initrd.lz ${{ matrix.boot_opts }}
+
+          LABEL safe
+          MENU LABEL Start ${{ matrix.label }} (Safe Graphics)
+          KERNEL /casper/vmlinuz
+          APPEND initrd=/casper/initrd.lz ${{ matrix.boot_opts }} nomodeset
+
+          LABEL install
+          MENU LABEL Install ${{ matrix.label }} OS
+          KERNEL /casper/vmlinuz
+          APPEND initrd=/casper/initrd.lz ${{ matrix.inst_opts }}" | sudo tee ext/boot/isolinux/isolinux.cfg
           
           dd if=/dev/zero of=ext/boot/efiboot.img bs=1M count=10
           mkfs.vfat ext/boot/efiboot.img
