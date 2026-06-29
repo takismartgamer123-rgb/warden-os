@@ -161,9 +161,20 @@ jobs:
           sudo mkdir -p chroot/usr/share/backgrounds && sudo cp gamma-wallpaper.jpg chroot/usr/share/backgrounds/gamma-wallpaper.jpg || true
         fi
         
-        # لقطة ذكية لالتقاط الـ Kernel والـ Initrd من مجلد boot أو مجلد الجذر الرئيسي مباشرة
-        VMLINUZ_FILE=$(ls chroot/boot/vmlinuz-* chroot/vmlinuz 2>/dev/null | head -n 1)
-        INITRD_FILE=$(ls chroot/boot/initrd.img-* chroot/boot/initrd-* chroot/initrd.img 2>/dev/null | head -n 1)
+        # التقاط ذكي وبصلاحيات الروت لتفادي المشاكل الأمنية لـ GitHub Actions
+        VMLINUZ_FILE=$(sudo sh -c 'ls chroot/boot/vmlinuz-* chroot/vmlinuz 2>/dev/null | head -n 1')
+        INITRD_FILE=$(sudo sh -c 'ls chroot/boot/initrd.img-* chroot/boot/initrd-* chroot/initrd.img 2>/dev/null | head -n 1')
+        
+        echo "Found Kernel: $VMLINUZ_FILE"
+        echo "Found Initrd: $INITRD_FILE"
+        
+        # نظام حماية للتأكد من عدم بقاء المسارات فارغة
+        if [ -z "$VMLINUZ_FILE" ] || [ -z "$INITRD_FILE" ]; then
+          echo "🚨 CRITICAL ERROR: Kernel or Initrd not found!"
+          echo "=== Contents of chroot /boot ==="
+          sudo ls -la chroot/boot/
+          exit 1
+        fi
         
         sudo umount chroot/dev chroot/run chroot/proc chroot/sys || true
         
