@@ -7,18 +7,18 @@ jobs:
   screenshot-matrix:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false # لو نسخة فشلت، الباقي يكمل
+      fail-fast: false # لو نسخة فشلت، الباقي يكمل بدون مشاكل
       matrix:
         edition: [legacy32, lite-ghost, pro-maxmini]
         include:
           - edition: legacy32 
-            iso_url: "https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/v2.3.0-FINAL-legacy32/gamma-legacy-32.iso"
+            iso_url: "https://github.com"
             display_name: "Legacy 32-bit"
           - edition: lite-ghost 
-            iso_url: "https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/v2.3.0-FINAL-lite-ghost/gamma-lite-ghost.iso"
+            iso_url: "https://github.com"
             display_name: "Lite Ghost"
           - edition: pro-maxmini 
-            iso_url: "https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/v2.3.0-FINAL-pro-maxmini/gamma-pro-maxmini.iso"
+            iso_url: "https://github.com"
             display_name: "Pro MaxMini"
 
     name: Capture ${{ matrix.display_name }} Edition
@@ -30,16 +30,17 @@ jobs:
 
       - name: Start Virtual Display
         run: |
+          # إنشاء الشاشة الوهمية بدقة HD خفيفة ومستقرة
           Xvfb :99 -screen 0 1280x720x24 &
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
       - name: Download ISO
         run: |
           echo "Downloading Gamma Linux ${{ matrix.display_name }}..."
-          # خيار -fSL يضمن تتبع الـ Redirects والتحميل الفعلي للملف بالكامل
+          # تحميل نظيف يتبع الروابط الفعليّة لغيت هاب
           curl -fSL -o current_gamma.iso "${{ matrix.iso_url }}"
           
-          # طباعة حجم الملف في الـ Logs للتأكد من اكتمال التحميل
+          # طباعة الحجم للتأكد الفوري في الـ Logs
           ls -lh current_gamma.iso
 
       - name: Boot and Capture
@@ -48,20 +49,22 @@ jobs:
         run: |
           echo "Booting Gamma Linux ${{ matrix.display_name }}..."
           
-          # منع رسائل خطأ واجهة الـ GTK في البيئة السحابية
+          # تعطيل الجسور والميزات التي قد تسبب تجميد الواجهة الرسومية في السيرفر
           export NO_AT_BRIDGE=1
+          export QT_ACCESSIBILITY=0
           
-          # تشغيل النسخة بالمحاكي المناسب وبدون بطاقة صوت حقيقية لتجنب أي تجميد
+          # تشغيل المحاكي مع رام 2G، وتحديد معالج متوافق لحل الـ Kernel Panic، وإلغاء الصوت تماماً
           if [ "${{ matrix.edition }}" = "legacy32" ]; then
-            qemu-system-i386 -m 1G -cdrom current_gamma.iso -vga std -audiodev none,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 -no-reboot &
+            qemu-system-i386 -m 2G -cpu pentium3 -cdrom current_gamma.iso -vga std -audiodev none,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 -no-reboot &
           else
-            qemu-system-x86_64 -m 1G -cdrom current_gamma.iso -vga std -audiodev none,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 -no-reboot &
+            qemu-system-x86_64 -m 2G -cpu max -cdrom current_gamma.iso -vga std -audiodev none,id=snd0 -device intel-hda -device hda-output,audiodev=snd0 -no-reboot &
           fi
           
-          # الانتظار لمدة 65 ثانية لضمان إقلاع الواجهة الرسومية واستقرارها تماماً
-          sleep 65 
+          # تمديد وقت الانتظار إلى 75 ثانية لضمان استقرار إقلاع النواة ووصول الواجهة بالكامل
+          echo "Waiting 75 seconds for Gamma Linux to boot into Desktop..."
+          sleep 75 
 
-          # أخذ اللقطة وتسميتها باسم النسخة
+          # التقاط لقطة الشاشة وحفظها باسم النسخة الحالية
           scrot -q 100 "gamma_${{ matrix.edition }}_boot.png"
 
       - name: Upload Screenshot for ${{ matrix.display_name }}
