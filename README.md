@@ -28,9 +28,9 @@ No Snap. No Flatpak. No Bloat. Only Speed.
 
  ***2. EDITIONS & SIZES - v2.1 ROYAL***
 
-1. Gamma Legacy 32 1.18 GB | 32-bit | For 512MB RAM | Debian Base
-2. Gamma Lite Ghost 1.39 GB | 64-bit | For 1GB RAM | Ubuntu Base
-3. Gamma Fatih Pro 1.39 GB | 64-bit | For 2GB+ RAM | Ubuntu Base
+1. Gamma Legacy 32 766 MB | 32-bit | For 512MB RAM | Debian Base
+2. Gamma Lite Ghost 1.75 GB | 64-bit | For 1GB RAM | Ubuntu Base
+3. Gamma Fatih Pro 1.76 GB | 64-bit | For 2GB+ RAM | Ubuntu Base
 
 UI: LXQt 1.4 | Theme: Gamma-Dark Royal | Icons: Papirus-Dark
 Installer: Calamares + Ubiquity
