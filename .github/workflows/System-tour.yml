@@ -12,13 +12,13 @@ jobs:
         edition: [legacy32, lite-ghost, pro-maxmini]
         include:
           - edition: legacy32 
-            iso_url: "https://github.com/YOUR_USER/YOUR_REPO/releases/download/v2.3.0-FINAL/gamma-legacy32.iso" # ضع الرابط الحقيقي هنا
+            iso_url: "https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/v2.3.0-FINAL/gamma-legacy32.iso" # ضع الرابط الحقيقي هنا
             display_name: "Legacy 32-bit"
           - edition: lite-ghost 
-            iso_url: "https://github.com/YOUR_USER/YOUR_REPO/releases/download/v2.3.0-FINAL/gamma-lite-ghost.iso" # ضع الرابط الحقيقي هنا
+            iso_url: "https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/v2.3.0-FINAL/gamma-lite-ghost.iso" # ضع الرابط الحقيقي هنا
             display_name: "Lite Ghost"
           - edition: pro-maxmini 
-            iso_url: "https://github.com/YOUR_USER/YOUR_REPO/releases/download/v2.3.0-FINAL/gamma-pro-maxmini.iso" # ضع الرابط الحقيقي هنا
+            iso_url: "https://github.com/takismartgamer123-rgb/Gamma-linux/releases/download/v2.3.0-FINAL/gamma-pro-maxmini.iso" # ضع الرابط الحقيقي هنا
             display_name: "Pro MaxMini"
 
     name: Capture ${{ matrix.display_name }} Edition
