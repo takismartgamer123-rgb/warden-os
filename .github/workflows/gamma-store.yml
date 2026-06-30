@@ -94,7 +94,7 @@ jobs:
             sudo dpkg -i gamma-store-pro_2.2-Royal_all.deb
             sudo apt-get install -f
             gamma-store
-### ♾️ Credits
+            ### ♾️ Credits
             *By: Taki - 17 Years Old from Guelma, Algeria*  
             *Dedicated to my father Fateh*  
             *Alpha failed. Beta crashed. Gamma SURVIVES* 🇩🇿
