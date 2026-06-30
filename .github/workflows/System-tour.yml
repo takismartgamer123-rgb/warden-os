@@ -1,0 +1,66 @@
+name: Capture All Gamma Linux v2.3.0 Editions
+
+on:
+  workflow_dispatch: # يتيح لك التشغيل اليدوي بضغطة زر واحدة من الـ Actions
+
+jobs:
+  screenshot-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # لو نسخة فشلت، الباقي يكمل بدون مشاكل
+      matrix:
+        edition: [legacy32, lite-ghost, pro-maxmini]
+        include:
+          - edition: legacy32 
+            iso_url: "https://github.com"
+            display_name: "Legacy 32-bit"
+          - edition: lite-ghost 
+            iso_url: "https://github.com"
+            display_name: "Lite Ghost"
+          - edition: pro-maxmini 
+            iso_url: "https://github.com"
+            display_name: "Pro MaxMini"
+
+    name: Capture ${{ matrix.display_name }} Edition
+    steps:
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          # تثبيت محاكي الـ 64 بت والـ 32 بت مع أدوات الشاشة الوهمية والتصوير
+          sudo apt-get install -y qemu-system-x86 xvfb scrot
+
+      - name: Start Virtual Display
+        run: |
+          # إنشاء الشاشة الوهمية بالدقة الذكية التي اخترتها أنت 720p
+          Xvfb :99 -screen 0 1280x720x24 &
+          echo "DISPLAY=:99" >> $GITHUB_ENV
+
+      - name: Download ISO
+        run: |
+          # تحميل ملف الـ ISO الخاص بالنسخة الحالية بسرعة سيرفرات GitHub
+          curl -L -o current_gamma.iso "${{ matrix.iso_url }}"
+
+      - name: Boot and Capture
+        env:
+          DISPLAY: :99
+        run: |
+          echo "Booting Gamma Linux ${{ matrix.display_name }}..."
+          
+          # اختيار المحاكي المناسب تلقائياً بناءً على نوع النسخة وتشغيلها في الخلفية
+          if [ "${{ matrix.edition }}" = "legacy32" ]; then
+            qemu-system-i386 -m 1G -cdrom current_gamma.iso -vga std -no-reboot &
+          else
+            qemu-system-x86_64 -m 1G -cdrom current_gamma.iso -vga std -no-reboot &
+          fi
+          
+          # الانتظار لمدة 50 ثانية لضمان وصول التوزيعة لسطح المكتب
+          sleep 50 
+
+          # التقاط صورة الشاشة بجودة كاملة 100%
+          scrot -q 100 "gamma_${{ matrix.edition }}_boot.png"
+
+      - name: Upload Screenshot for ${{ matrix.display_name }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gamma-v2.3-${{ matrix.edition }}-screenshot
+          path: gamma_${{ matrix.edition }}_boot.png
