@@ -67,7 +67,7 @@ jobs:
           
           # بما أن KVM شغال، 50 ثانية كافية جداً لضمان استقرار إقلاع النواة ووصول الواجهة بالكامل
           echo "Waiting 50 seconds for Gamma Linux to boot into Desktop..."
-          sleep 50 
+          sleep 180 
 
           # التقاط لقطة الشاشة وحفظها بنقاء كامل باسم النسخة الحالية
           scrot -q 100 "gamma_${{ matrix.edition }}_boot.png"
